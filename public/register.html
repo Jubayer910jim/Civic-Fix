@@ -250,6 +250,20 @@
             color: #819087;
         }
 
+        .password-feedback {
+            display: block;
+            min-height: 18px;
+            margin-top: 7px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .password-feedback:empty { display: none; }
+        .password-feedback.error { color: #b42318; }
+        .password-feedback.success { color: #087b50; }
+        #confirmPassword[data-match-state="error"] { border-color: #d92d20; }
+        #confirmPassword[data-match-state="success"] { border-color: #0a8f5d; }
+
         .primary-button {
             width: 100%;
             min-height: 49px;
@@ -503,6 +517,7 @@
                         </label>
                         <input type="password" id="confirmPassword" name="confirmPassword"
                             placeholder="Enter your password again" minlength="8" autocomplete="new-password" required>
+                        <small id="confirmPasswordFeedback" class="password-feedback" aria-live="polite"></small>
                     </div>
 
                     <button type="submit" class="primary-button" id="registerButton" data-en="Create Account"
@@ -573,6 +588,9 @@
 
         const registerMessage = document.getElementById("registerMessage");
         const otpMessage = document.getElementById("otpMessage");
+        const passwordInput = document.getElementById("password");
+        const confirmPasswordInput = document.getElementById("confirmPassword");
+        const confirmPasswordFeedback = document.getElementById("confirmPasswordFeedback");
 
         const emailTab = document.getElementById("emailTab");
         const phoneTab = document.getElementById("phoneTab");
@@ -592,7 +610,9 @@
             en: {
                 passwordShort: "Password must contain at least 8 characters.",
                 passwordMismatch: "The passwords do not match.",
+                passwordMatched: "Passwords match.",
                 invalidEmail: "Please enter a valid email address.",
+                emailRecipientRejected: "The mail server rejected this email address. Check it and enter an existing email address.",
                 invalidPhone: "Enter a valid Bangladesh mobile number.",
                 emailOnly: "Email registration is available now. Phone registration is coming soon.",
                 phoneSuccess: "Phone account created. Redirecting to your portal...",
@@ -614,7 +634,9 @@
             bn: {
                 passwordShort: "পাসওয়ার্ডে কমপক্ষে ৮টি অক্ষর থাকতে হবে।",
                 passwordMismatch: "পাসওয়ার্ড দুটি মিলছে না।",
+                passwordMatched: "পাসওয়ার্ড মিলেছে।",
                 invalidEmail: "সঠিক ইমেইল ঠিকানা লিখুন।",
+                emailRecipientRejected: "মেইল সার্ভার এই ঠিকানাটি গ্রহণ করেনি। ঠিকানাটি যাচাই করে একটি চালু ইমেইল ঠিকানা লিখুন।",
                 invalidPhone: "সঠিক বাংলাদেশি মোবাইল নম্বর লিখুন।",
                 emailOnly: "ইমেইল নিবন্ধন এখন চালু আছে। ফোন নিবন্ধন শীঘ্রই আসছে।",
                 phoneSuccess: "ফোন অ্যাকাউন্ট তৈরি হয়েছে। পোর্টালে নেওয়া হচ্ছে...",
@@ -648,6 +670,36 @@
             element.textContent = "";
             element.className = "form-message";
         }
+
+        function updateConfirmPasswordFeedback() {
+            const password = passwordInput.value;
+            const confirmation = confirmPasswordInput.value;
+
+            confirmPasswordFeedback.className = "password-feedback";
+            confirmPasswordFeedback.textContent = "";
+
+            if (!confirmation) {
+                confirmPasswordInput.removeAttribute("data-match-state");
+                confirmPasswordInput.removeAttribute("aria-invalid");
+                return;
+            }
+
+            if (password !== confirmation) {
+                confirmPasswordFeedback.classList.add("error");
+                confirmPasswordFeedback.textContent = t("passwordMismatch");
+                confirmPasswordInput.dataset.matchState = "error";
+                confirmPasswordInput.setAttribute("aria-invalid", "true");
+                return;
+            }
+
+            confirmPasswordFeedback.classList.add("success");
+            confirmPasswordFeedback.textContent = "✓ " + t("passwordMatched");
+            confirmPasswordInput.dataset.matchState = "success";
+            confirmPasswordInput.setAttribute("aria-invalid", "false");
+        }
+
+        passwordInput.addEventListener("input", updateConfirmPasswordFeedback);
+        confirmPasswordInput.addEventListener("input", updateConfirmPasswordFeedback);
 
         // EMAIL / PHONE TABS
         function setMethod(method) {
@@ -720,6 +772,7 @@
                 language === "en" ? "বাংলা" : "English";
 
             localStorage.setItem("civicFixLanguage", language);
+            updateConfirmPasswordFeedback();
         }
 
         document.getElementById("languageToggle").addEventListener("click", () => {
@@ -796,6 +849,9 @@
                 const data = await response.json();
 
                 if (!response.ok) {
+                    if (data.code === "INVALID_EMAIL_RECIPIENT") {
+                        throw new Error(t("emailRecipientRejected"));
+                    }
                     throw new Error(data.message || t("registerFailed"));
                 }
 

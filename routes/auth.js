@@ -54,6 +54,16 @@ async function sendRegistrationEmail(email, otp) {
     });
 }
 
+function isPermanentlyRejectedRecipient(error, email) {
+    const rejectedRecipients = Array.isArray(error.rejected)
+        ? error.rejected.map(address => String(address).trim().toLowerCase())
+        : [];
+    const recipientWasRejected = rejectedRecipients.includes(email.toLowerCase());
+
+    return error.permanent === true &&
+        (error.command === "RCPT TO" || (error.code === "EENVELOPE" && recipientWasRejected));
+}
+
 async function sendGoogleLoginEmail(email, otp) {
     const transporter = createEmailTransporter();
 
@@ -116,7 +126,7 @@ function savePendingGoogleSession(req, userId, email) {
                 userId,
                 email,
                 method: "email",
-                googleLogin: true
+                googleRegistration: true
             };
 
             req.session.save(saveError => {
@@ -227,6 +237,14 @@ router.post("/register", async (req, res) => {
 
             console.error("Registration email error:", emailError.message);
 
+            if (isPermanentlyRejectedRecipient(emailError, normalizedEmail)) {
+                return res.status(400).json({
+                    success: false,
+                    code: "INVALID_EMAIL_RECIPIENT",
+                    message: "The mail server rejected this email address. Check it and enter an existing email address."
+                });
+            }
+
             return res.status(503).json({
                 success: false,
                 message: "We could not send the verification email. Please check the email configuration and try again."
@@ -319,7 +337,7 @@ router.post("/google", async (req, res) => {
                 `INSERT INTO users
                     (full_name, email, google_id, password_hash, auth_provider,
                      role, account_status, email_verified)
-                 VALUES (?, ?, ?, ?, 'google', 'citizen', 'active', 1)`,
+                 VALUES (?, ?, ?, ?, 'google', 'citizen', 'pending', 0)`,
                 [fullName, normalizedEmail, googleId, unusablePasswordHash]
             );
 
@@ -329,7 +347,7 @@ router.post("/google", async (req, res) => {
                 email: normalizedEmail,
                 phone: null,
                 role: "citizen",
-                account_status: "active"
+                account_status: "pending"
             }];
         }
 
@@ -337,7 +355,29 @@ router.post("/google", async (req, res) => {
         if (user.role !== "citizen") {
             return res.status(403).json({ success: false, message: "Google sign-in is available for citizen accounts only." });
         }
-        if (user.account_status !== "active") {
+        if (user.account_status === "active") {
+            await new Promise((resolve, reject) => {
+                req.session.regenerate(error => error ? reject(error) : resolve());
+            });
+            req.session.user = {
+                user_id: user.user_id,
+                full_name: user.full_name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role
+            };
+            await new Promise((resolve, reject) => {
+                req.session.save(error => error ? reject(error) : resolve());
+            });
+
+            return res.json({
+                success: true,
+                message: "Google sign-in successful.",
+                user: { user_id: user.user_id, full_name: user.full_name, email: user.email, role: user.role },
+                redirect: "/citizen.html"
+            });
+        }
+        if (user.account_status !== "pending") {
             return res.status(403).json({ success: false, message: "This account is not active. Contact an administrator for help." });
         }
 
@@ -358,7 +398,7 @@ router.post("/google", async (req, res) => {
                 success: true,
                 otpRequired: true,
                 destination: user.email,
-                message: "A sign-in code was just sent. Check your email or use Resend OTP."
+                message: "A Google registration code was just sent. Check your email or use Resend OTP."
             });
         }
 
@@ -393,7 +433,7 @@ router.post("/google", async (req, res) => {
             success: true,
             otpRequired: true,
             destination: user.email,
-            message: "A sign-in verification code was sent to your email."
+            message: "A Google registration verification code was sent to your email."
         });
     } catch (error) {
         console.error("Google sign-in error:", error.message);
@@ -562,7 +602,9 @@ router.post("/verify-otp", async (req, res) => {
 
         return res.json({
             success: true,
-            message: pending.googleLogin
+            message: pending.googleRegistration
+                ? "Your Google account is verified and ready."
+                : pending.googleLogin
                 ? "Your sign-in code is verified."
                 : "Your email has been verified. Your account is now active.",
             redirect: "citizen.html"
@@ -663,7 +705,7 @@ router.post("/resend-otp", async (req, res) => {
         await connection.commit();
 
         try {
-            if (pending.googleLogin) {
+            if (pending.googleLogin || pending.googleRegistration) {
                 await sendGoogleLoginEmail(users[0].email, otp);
             } else {
                 await sendRegistrationEmail(users[0].email, otp);
@@ -679,7 +721,9 @@ router.post("/resend-otp", async (req, res) => {
 
         return res.json({
             success: true,
-            message: pending.googleLogin
+            message: pending.googleRegistration
+                ? "A new Google registration verification code has been sent."
+                : pending.googleLogin
                 ? "A new sign-in verification code has been sent."
                 : "A new verification code has been sent."
         });

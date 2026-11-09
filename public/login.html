@@ -11,6 +11,7 @@
     >
 
     <title>Login | Civic Fix</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 
     <!-- Google Fonts -->
@@ -36,10 +37,6 @@
         href="css/login.css"
     >
 
-<style>
-.login-method-button{padding:8px 14px;border:1px solid #cbd5d1;border-radius:6px;background:#fff;color:#263b33;cursor:pointer}
-.login-method-button[aria-pressed="true"]{background:#087b50;border-color:#087b50;color:#fff}
-</style>
 </head>
 
 
@@ -229,6 +226,11 @@
                      LOGIN FORM
                 ========================== -->
 
+                <div id="googleLoginSection" class="login-google-section">
+                    <div id="googleLoginButton" class="google-signin-container" aria-label="Continue with Google"></div>
+                    <div class="login-auth-divider"><span>OR SIGN IN WITH EMAIL OR PHONE</span></div>
+                </div>
+
                 <form
                     id="loginForm"
                     novalidate
@@ -239,12 +241,12 @@
 
                     <div class="form-group">
 
-                        <div style="display:flex;gap:8px;margin-bottom:10px" id="loginMethodToggle" role="group" aria-label="Sign-in method">
+                    <div class="login-method-tabs" id="loginMethodToggle" role="group" aria-label="Sign-in method">
                             <button type="button" class="login-method-button" id="loginEmailTab" aria-pressed="true">Email</button>
                             <button type="button" class="login-method-button" id="loginPhoneTab" aria-pressed="false">Phone</button>
-                        </div>
+                    </div>
                         <label for="email" id="identifierLabel">Email Address</label>
-                        <div id="phonePrefix" style="display:none;margin-bottom:6px;color:#456">+880</div>
+                        <div id="phonePrefix" class="phone-prefix" hidden>+880</div>
                         <input type="email" id="email" name="identifier"
                             placeholder="Enter your email address" autocomplete="email" required>
 
@@ -326,6 +328,21 @@
 
                 </form>
 
+                <section id="loginOtpView" class="login-otp-view" hidden aria-labelledby="loginOtpTitle">
+                    <h3 id="loginOtpTitle">Verify your sign-in</h3>
+                    <p>We sent a 6-digit verification code to <strong id="loginOtpDestination"></strong>.</p>
+                    <form id="loginOtpForm" novalidate>
+                        <div class="form-group">
+                            <label for="loginOtp">Verification code</label>
+                            <input type="text" id="loginOtp" inputmode="numeric" autocomplete="one-time-code"
+                                maxlength="6" placeholder="Enter 6-digit code" required>
+                        </div>
+                        <div id="loginOtpMessage" class="login-message" role="alert" aria-live="polite"></div>
+                        <button type="submit" id="verifyLoginOtpButton" class="login-button">Verify and continue</button>
+                    </form>
+                    <button type="button" id="resendLoginOtpButton" class="login-resend-button">Resend code</button>
+                </section>
+
 
 
                 <!-- Demo Information -->
@@ -344,6 +361,11 @@
                     </p>
 
                 </div>
+
+                <p class="login-register-prompt">
+                    New to Civic Fix?
+                    <a href="/register.html">Create an account</a>
+                </p>
 
 
             </div>

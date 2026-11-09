@@ -20,6 +20,15 @@ const phoneTab = document.getElementById("loginPhoneTab");
 const identifierLabel = document.getElementById("identifierLabel");
 const phonePrefix = document.getElementById("phonePrefix");
 const methodToggle = document.getElementById("loginMethodToggle");
+const googleLoginSection = document.getElementById("googleLoginSection");
+const googleLoginButton = document.getElementById("googleLoginButton");
+const loginOtpView = document.getElementById("loginOtpView");
+const loginOtpForm = document.getElementById("loginOtpForm");
+const loginOtpInput = document.getElementById("loginOtp");
+const loginOtpMessage = document.getElementById("loginOtpMessage");
+const loginOtpDestination = document.getElementById("loginOtpDestination");
+const verifyLoginOtpButton = document.getElementById("verifyLoginOtpButton");
+const resendLoginOtpButton = document.getElementById("resendLoginOtpButton");
 
 const passwordInput =
     document.getElementById("password");
@@ -128,6 +137,8 @@ function setupPortalDesign() {
 
         loginButtonText.textContent =
             "Login as Citizen";
+        methodToggle.hidden = false;
+        googleLoginSection.hidden = false;
 
     }
 
@@ -170,6 +181,7 @@ function setupPortalDesign() {
         loginButtonText.textContent =
             "Login as Admin";
         methodToggle.hidden = true;
+        googleLoginSection.hidden = true;
 
     }
 
@@ -179,6 +191,27 @@ function setupPortalDesign() {
 // Run immediately
 
 setupPortalDesign();
+
+function setLoginMethod(method) {
+    loginMethod = method;
+    const usePhone = method === "phone";
+
+    emailInput.type = usePhone ? "tel" : "email";
+    emailInput.name = usePhone ? "phone" : "email";
+    emailInput.placeholder = usePhone ? "1712345678" : "Enter your email address";
+    emailInput.autocomplete = usePhone ? "tel-national" : "email";
+    emailInput.inputMode = usePhone ? "numeric" : "email";
+    identifierLabel.textContent = usePhone ? "Bangladesh Phone Number" : "Email Address";
+    phonePrefix.hidden = !usePhone;
+    emailTab.setAttribute("aria-pressed", String(!usePhone));
+    phoneTab.setAttribute("aria-pressed", String(usePhone));
+    emailInput.value = "";
+    clearMessage();
+}
+
+emailTab.addEventListener("click", () => setLoginMethod("email"));
+phoneTab.addEventListener("click", () => setLoginMethod("phone"));
+setLoginMethod("email");
 
 
 // ==========================================
@@ -504,6 +537,127 @@ loginForm.addEventListener(
 
     }
 );
+
+// ==========================================
+// GOOGLE SIGN-IN WITH EMAIL OTP
+// ==========================================
+
+const GOOGLE_CLIENT_ID = "739688046500-notkt1q3m2ptdaq7eej1kebkj3g7mqbl.apps.googleusercontent.com";
+
+function showLoginOtpMessage(message, type = "error") {
+    loginOtpMessage.textContent = message;
+    loginOtpMessage.className = "login-message show " + type;
+}
+
+async function handleGoogleLoginCredential(response) {
+    clearMessage();
+    if (!response || !response.credential) {
+        showMessage("Google did not return a sign-in credential.");
+        return;
+    }
+
+    googleLoginButton.style.pointerEvents = "none";
+    try {
+        const result = await fetch("/api/auth/google", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ credential: response.credential })
+        });
+        const data = await result.json();
+        if (!result.ok || !data.success) {
+            throw new Error(data.message || "Google sign-in failed.");
+        }
+
+        if (data.otpRequired) {
+            loginOtpDestination.textContent = data.destination || "your Google account email";
+            loginForm.hidden = true;
+            googleLoginSection.hidden = true;
+            loginOtpView.hidden = false;
+            loginOtpInput.focus();
+            showLoginOtpMessage(data.message || "Enter the verification code sent to your email.", "success");
+            return;
+        }
+
+        window.location.href = data.redirect || "/citizen.html";
+    } catch (error) {
+        showMessage(error.message || "Unable to sign in with Google. Please try again.");
+        googleLoginButton.style.pointerEvents = "";
+    }
+}
+
+function initializeGoogleLogin() {
+    if (selectedRole !== "citizen") return;
+    if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+        window.setTimeout(initializeGoogleLogin, 150);
+        return;
+    }
+
+    window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleLoginCredential
+    });
+    window.google.accounts.id.renderButton(
+        googleLoginButton,
+        { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: 320 }
+    );
+}
+
+initializeGoogleLogin();
+
+loginOtpForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    loginOtpMessage.textContent = "";
+    loginOtpMessage.className = "login-message";
+
+    const otp = loginOtpInput.value.trim();
+    if (!/^[0-9]{6}$/.test(otp)) {
+        showLoginOtpMessage("Enter the 6-digit code from your email.");
+        loginOtpInput.focus();
+        return;
+    }
+
+    verifyLoginOtpButton.disabled = true;
+    try {
+        const result = await fetch("/api/auth/verify-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ otp, method: "email" })
+        });
+        const data = await result.json();
+        if (!result.ok || !data.success) {
+            throw new Error(data.message || "Could not verify the code.");
+        }
+        showLoginOtpMessage("Code verified. Redirecting...", "success");
+        window.location.href = data.redirect || "/citizen.html";
+    } catch (error) {
+        showLoginOtpMessage(error.message || "Could not verify the code.");
+    } finally {
+        verifyLoginOtpButton.disabled = false;
+    }
+});
+
+resendLoginOtpButton.addEventListener("click", async () => {
+    resendLoginOtpButton.disabled = true;
+    try {
+        const result = await fetch("/api/auth/resend-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ method: "email" })
+        });
+        const data = await result.json();
+        if (!result.ok || !data.success) {
+            throw new Error(data.message || "Could not resend the code.");
+        }
+        showLoginOtpMessage(data.message || "A new code was sent.", "success");
+    } catch (error) {
+        showLoginOtpMessage(error.message || "Could not resend the code.");
+    } finally {
+        resendLoginOtpButton.disabled = false;
+    }
+});
 
 
 // ==========================================
