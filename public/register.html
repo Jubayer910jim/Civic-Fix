@@ -928,6 +928,11 @@
                 });
                 const data = await result.json();
                 if (!result.ok || !data.success) throw new Error(data.message || "Google sign-in failed.");
+                if (data.otpRequired) {
+                    showOtpScreen(data.destination || "");
+                    showMessage(otpMessage, data.message || t("otpSent"), "success");
+                    return;
+                }
                 showMessage(registerMessage, data.message || "Google sign-in successful.", "success");
                 window.setTimeout(() => { window.location.href = data.redirect || "/citizen.html"; }, 500);
             } catch (error) {

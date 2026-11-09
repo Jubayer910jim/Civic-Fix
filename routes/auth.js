@@ -54,6 +54,26 @@ async function sendRegistrationEmail(email, otp) {
     });
 }
 
+async function sendGoogleLoginEmail(email, otp) {
+    const transporter = createEmailTransporter();
+
+    await transporter.sendMail({
+        from: `"Civic Fix" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "Your Civic Fix sign-in code",
+        text: `Your Civic Fix sign-in verification code is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes. Do not share this code with anyone.`,
+        html: `
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:25px;color:#18332b">
+                <h2 style="color:#087b50">Verify your Civic Fix sign-in</h2>
+                <p>Enter this verification code to finish signing in:</p>
+                <div style="font-size:32px;font-weight:bold;letter-spacing:8px;padding:18px;background:#f0f7f3;text-align:center;border-radius:10px">${otp}</div>
+                <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes. Do not share it with anyone.</p>
+                <p>If you did not try to sign in, you can ignore this email.</p>
+            </div>
+        `
+    });
+}
+
 // Generate a cryptographically random six-digit OTP
 function generateOTP() {
     return crypto.randomInt(100000, 1000000).toString();
@@ -83,6 +103,26 @@ function savePendingSession(req, userId, email) {
         req.session.save(error => {
             if (error) return reject(error);
             resolve();
+        });
+    });
+}
+
+function savePendingGoogleSession(req, userId, email) {
+    return new Promise((resolve, reject) => {
+        req.session.regenerate(error => {
+            if (error) return reject(error);
+
+            req.session.pendingRegistration = {
+                userId,
+                email,
+                method: "email",
+                googleLogin: true
+            };
+
+            req.session.save(saveError => {
+                if (saveError) return reject(saveError);
+                resolve();
+            });
         });
     });
 }
@@ -301,25 +341,59 @@ router.post("/google", async (req, res) => {
             return res.status(403).json({ success: false, message: "This account is not active. Contact an administrator for help." });
         }
 
-        await new Promise((resolve, reject) => {
-            req.session.regenerate(error => error ? reject(error) : resolve());
-        });
-        req.session.user = {
-            user_id: user.user_id,
-            full_name: user.full_name,
-            email: user.email,
-            phone: user.phone,
-            role: user.role
-        };
-        await new Promise((resolve, reject) => {
-            req.session.save(error => error ? reject(error) : resolve());
-        });
+        const [recentOTPs] = await connection.execute(
+            `SELECT otp_id
+             FROM email_otps
+             WHERE user_id = ?
+               AND purpose = 'registration'
+               AND verified_at IS NULL
+               AND created_at > DATE_SUB(NOW(), INTERVAL ? SECOND)
+             ORDER BY created_at DESC
+             LIMIT 1`,
+            [user.user_id, OTP_RESEND_WAIT_SECONDS]
+        );
+        if (recentOTPs.length > 0) {
+            await savePendingGoogleSession(req, user.user_id, user.email);
+            return res.json({
+                success: true,
+                otpRequired: true,
+                destination: user.email,
+                message: "A sign-in code was just sent. Check your email or use Resend OTP."
+            });
+        }
+
+        const otp = generateOTP();
+        await connection.beginTransaction();
+        await connection.execute(
+            `DELETE FROM email_otps
+             WHERE user_id = ? AND purpose = 'registration' AND verified_at IS NULL`,
+            [user.user_id]
+        );
+        await saveOTP(connection, user.user_id, otp);
+        await connection.commit();
+
+        try {
+            await sendGoogleLoginEmail(user.email, otp);
+        } catch (emailError) {
+            await db.execute(
+                `DELETE FROM email_otps
+                 WHERE user_id = ? AND purpose = 'registration' AND verified_at IS NULL`,
+                [user.user_id]
+            );
+            console.error("Google sign-in OTP email error:", emailError.message);
+            return res.status(503).json({
+                success: false,
+                message: "Google sign-in succeeded, but we could not send the verification code. Please try again."
+            });
+        }
+
+        await savePendingGoogleSession(req, user.user_id, user.email);
 
         return res.json({
             success: true,
-            message: "Google sign-in successful.",
-            user: { user_id: user.user_id, full_name: user.full_name, email: user.email, role: user.role },
-            redirect: "/citizen.html"
+            otpRequired: true,
+            destination: user.email,
+            message: "A sign-in verification code was sent to your email."
         });
     } catch (error) {
         console.error("Google sign-in error:", error.message);
@@ -418,14 +492,23 @@ router.post("/verify-otp", async (req, res) => {
             });
         }
 
-        const [users] = await connection.execute(
-            `SELECT user_id, full_name, email, role
-             FROM users
-             WHERE user_id = ? AND account_status = 'pending'
-             LIMIT 1
-             FOR UPDATE`,
-            [pending.userId]
-        );
+        const [users] = pending.googleLogin
+            ? await connection.execute(
+                `SELECT user_id, full_name, email, role
+                 FROM users
+                 WHERE user_id = ? AND account_status = 'active'
+                 LIMIT 1
+                 FOR UPDATE`,
+                [pending.userId]
+            )
+            : await connection.execute(
+                `SELECT user_id, full_name, email, role
+                 FROM users
+                 WHERE user_id = ? AND account_status = 'pending'
+                 LIMIT 1
+                 FOR UPDATE`,
+                [pending.userId]
+            );
 
         if (users.length === 0) {
             await connection.rollback();
@@ -441,13 +524,15 @@ router.post("/verify-otp", async (req, res) => {
             [savedOTP.otp_id]
         );
 
-        await connection.execute(
-            `UPDATE users
-             SET email_verified = 1,
-                 account_status = 'active'
-             WHERE user_id = ?`,
-            [pending.userId]
-        );
+        if (!pending.googleLogin) {
+            await connection.execute(
+                `UPDATE users
+                 SET email_verified = 1,
+                     account_status = 'active'
+                 WHERE user_id = ?`,
+                [pending.userId]
+            );
+        }
 
         await connection.commit();
 
@@ -477,7 +562,9 @@ router.post("/verify-otp", async (req, res) => {
 
         return res.json({
             success: true,
-            message: "Your email has been verified. Your account is now active.",
+            message: pending.googleLogin
+                ? "Your sign-in code is verified."
+                : "Your email has been verified. Your account is now active.",
             redirect: "citizen.html"
         });
 
@@ -516,18 +603,28 @@ router.post("/resend-otp", async (req, res) => {
 
         connection = await db.getConnection();
 
-        const [users] = await connection.execute(
-            `SELECT email
-             FROM users
-             WHERE user_id = ? AND account_status = 'pending'
-             LIMIT 1`,
-            [pending.userId]
-        );
+        const [users] = pending.googleLogin
+            ? await connection.execute(
+                `SELECT email
+                 FROM users
+                 WHERE user_id = ? AND account_status = 'active'
+                 LIMIT 1`,
+                [pending.userId]
+            )
+            : await connection.execute(
+                `SELECT email
+                 FROM users
+                 WHERE user_id = ? AND account_status = 'pending'
+                 LIMIT 1`,
+                [pending.userId]
+            );
 
         if (users.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: "This registration is no longer available. Please register again."
+                message: pending.googleLogin
+                    ? "This sign-in request is no longer available. Please sign in with Google again."
+                    : "This registration is no longer available. Please register again."
             });
         }
 
@@ -566,7 +663,11 @@ router.post("/resend-otp", async (req, res) => {
         await connection.commit();
 
         try {
-            await sendRegistrationEmail(users[0].email, otp);
+            if (pending.googleLogin) {
+                await sendGoogleLoginEmail(users[0].email, otp);
+            } else {
+                await sendRegistrationEmail(users[0].email, otp);
+            }
         } catch (emailError) {
             console.error("Resend email error:", emailError.message);
 
@@ -578,7 +679,9 @@ router.post("/resend-otp", async (req, res) => {
 
         return res.json({
             success: true,
-            message: "A new verification code has been sent."
+            message: pending.googleLogin
+                ? "A new sign-in verification code has been sent."
+                : "A new verification code has been sent."
         });
 
     } catch (error) {
