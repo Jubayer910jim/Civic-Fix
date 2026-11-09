@@ -1,226 +1,155 @@
-// ==========================================
+
+// ==============================
 // CIVIC FIX - MAIN JAVASCRIPT
-// Homepage
-// Language Switching + Dark/Light Mode
-// ==========================================
+// ==============================
 
 
-// ==========================================
-// 1. GET HTML ELEMENTS
-// ==========================================
+// ==============================
+// 1. ENGLISH / BANGLA LANGUAGE MODE
+// ==============================
 
-const languageBtn = document.getElementById("languageBtn");
-const themeBtn = document.getElementById("themeBtn");
+const languageToggle = document.getElementById("languageToggle");
 
-
-// ==========================================
-// 2. LANGUAGE SETTINGS
-// ==========================================
-
-// Load saved language or use English by default
 let currentLanguage =
     localStorage.getItem("civicFixLanguage") || "en";
-
-
-// ==========================================
-// CHANGE LANGUAGE
-// ==========================================
 
 function changeLanguage(language) {
 
     currentLanguage = language;
 
-    // Update HTML language
-    document.documentElement.lang = currentLanguage;
+    document.documentElement.lang = language;
 
-    // Apply Bengali font class
-    document.body.classList.toggle(
-        "bengali",
-        currentLanguage === "bn"
-    );
+    // Translate normal text
+    document.querySelectorAll("[data-en][data-bn]").forEach(element => {
 
-    // Find all bilingual elements
-    const elements = document.querySelectorAll(
-        "[data-en][data-bn]"
-    );
-
-    // Change all text
-    elements.forEach(function (element) {
-
-        if (currentLanguage === "bn") {
-
-            element.textContent =
-                element.getAttribute("data-bn");
-
-        } else {
-
-            element.textContent =
-                element.getAttribute("data-en");
-
-        }
+        element.textContent =
+            language === "bn"
+                ? element.dataset.bn
+                : element.dataset.en;
 
     });
 
+    // Translate HTML content
+    document.querySelectorAll("[data-en-html][data-bn-html]").forEach(element => {
+
+        element.innerHTML =
+            language === "bn"
+                ? element.dataset.bnHtml
+                : element.dataset.enHtml;
+
+    });
+
+    // Translate placeholders
+    document.querySelectorAll(
+        "[data-en-placeholder][data-bn-placeholder]"
+    ).forEach(element => {
+
+        element.placeholder =
+            language === "bn"
+                ? element.dataset.bnPlaceholder
+                : element.dataset.enPlaceholder;
+
+    });
 
     // Update language button
-    if (languageBtn) {
+    if (languageToggle) {
 
-        languageBtn.textContent =
-            currentLanguage === "bn"
-                ? "English"
-                : "বাংলা";
+        languageToggle.textContent =
+            language === "en" ? "বাংলা" : "English";
 
     }
 
-
-    // Save language
-    localStorage.setItem(
-        "civicFixLanguage",
-        currentLanguage
-    );
-
-
-    // Update theme button text
-    updateThemeButtonText();
+    localStorage.setItem("civicFixLanguage", language);
 
 }
 
 
-// ==========================================
-// LANGUAGE BUTTON CLICK
-// ==========================================
+// Language button event
+if (languageToggle) {
 
-if (languageBtn) {
+    languageToggle.addEventListener("click", () => {
 
-    languageBtn.addEventListener("click", function () {
-
-        if (currentLanguage === "en") {
-
-            changeLanguage("bn");
-
-        } else {
-
-            changeLanguage("en");
-
-        }
+        changeLanguage(
+            currentLanguage === "en" ? "bn" : "en"
+        );
 
     });
 
 }
 
 
-// ==========================================
-// 3. DARK / LIGHT MODE
-// ==========================================
+// Load saved language
+changeLanguage(currentLanguage);
 
 
-// Load saved theme
+// ==============================
+// 2. LIGHT / DARK MODE
+// ==============================
+
+// Support both possible button IDs
+const themeButton =
+    document.getElementById("themeToggle") ||
+    document.getElementById("themeBtn");
+
 let currentTheme =
     localStorage.getItem("civicFixTheme") || "light";
 
 
-// ==========================================
-// UPDATE THEME BUTTON TEXT
-// ==========================================
+function updateThemeButton() {
 
-function updateThemeButtonText() {
+    if (!themeButton) return;
 
-    if (!themeBtn) return;
+    const icon = currentTheme === "dark" ? "☀️" : "🌙";
 
-    const themeText =
-        themeBtn.querySelector("span");
+    const label = currentTheme === "dark"
+        ? (currentLanguage === "bn" ? "লাইট মোড" : "Light mode")
+        : (currentLanguage === "bn" ? "ডার্ক মোড" : "Dark mode");
 
-    if (!themeText) return;
+    // Update button icon and label
+    const labelElement = themeButton.querySelector("span");
 
+    if (labelElement) {
 
-    if (currentTheme === "dark") {
-
-        if (currentLanguage === "bn") {
-
-            themeText.textContent = "লাইট মোড";
-
-        } else {
-
-            themeText.textContent = "Light Mode";
-
-        }
+        themeButton.firstChild.textContent = icon + " ";
+        labelElement.textContent = label;
 
     } else {
 
-        if (currentLanguage === "bn") {
-
-            themeText.textContent = "ডার্ক মোড";
-
-        } else {
-
-            themeText.textContent = "Dark Mode";
-
-        }
+        themeButton.textContent = icon;
 
     }
 
-}
-
-
-// ==========================================
-// APPLY THEME
-// ==========================================
-
-function applyTheme() {
-
-    if (!themeBtn) return;
-
-
-    if (currentTheme === "dark") {
-
-        // Enable dark mode
-        document.body.classList.add("dark-mode");
-
-        themeBtn.innerHTML =
-            "☀️ <span>Light Mode</span>";
-
-    } else {
-
-        // Enable light mode
-        document.body.classList.remove("dark-mode");
-
-        themeBtn.innerHTML =
-            "🌙 <span>Dark Mode</span>";
-
-    }
-
-
-    // Apply correct language to theme button
-    updateThemeButtonText();
-
-
-    // Save theme
-    localStorage.setItem(
-        "civicFixTheme",
-        currentTheme
+    themeButton.setAttribute(
+        "aria-label",
+        currentTheme === "dark"
+            ? "Switch to light mode"
+            : "Switch to dark mode"
     );
 
 }
 
 
-// ==========================================
-// THEME BUTTON CLICK
-// ==========================================
+function applyTheme() {
 
-if (themeBtn) {
+    document.body.classList.toggle(
+        "dark-mode",
+        currentTheme === "dark"
+    );
 
-    themeBtn.addEventListener("click", function () {
+    localStorage.setItem("civicFixTheme", currentTheme);
 
-        if (currentTheme === "light") {
+    updateThemeButton();
 
-            currentTheme = "dark";
+}
 
-        } else {
 
-            currentTheme = "light";
+// Theme button click
+if (themeButton) {
 
-        }
+    themeButton.addEventListener("click", () => {
 
+        currentTheme =
+            currentTheme === "light" ? "dark" : "light";
 
         applyTheme();
 
@@ -229,128 +158,97 @@ if (themeBtn) {
 }
 
 
-// ==========================================
-// 4. COMING SOON MESSAGE
-// Institution and Authority
-// ==========================================
-
-function showComingSoon(event, portalName) {
-
-    // Stop the link
-    event.preventDefault();
-
-
-    let message;
-
-
-    if (currentLanguage === "bn") {
-
-        if (portalName === "Institution") {
-
-            message =
-                "Institution Portal বর্তমানে তৈরি করা হচ্ছে।";
-
-        } else if (portalName === "Authority") {
-
-            message =
-                "Authority Portal বর্তমানে তৈরি করা হচ্ছে।";
-
-        } else {
-
-            message =
-                portalName +
-                " পোর্টালটি বর্তমানে তৈরি করা হচ্ছে।";
-
-        }
-
-    } else {
-
-        message =
-            portalName +
-            " Portal is currently under development.";
-
-    }
-
-
-    alert(message);
-
-}
-
-
-// ==========================================
-// 5. DISPLAY CURRENT YEAR
-// ==========================================
-
-const yearElement =
-    document.getElementById("year");
-
-
-if (yearElement) {
-
-    yearElement.textContent =
-        new Date().getFullYear();
-
-}
-
-
-// ==========================================
-// 6. SMOOTH SCROLL
-// ==========================================
-
-document.querySelectorAll('a[href^="#"]')
-    .forEach(function (link) {
-
-        link.addEventListener(
-            "click",
-            function (event) {
-
-                const targetId =
-                    link.getAttribute("href");
-
-
-                // Ignore just "#"
-                if (
-                    !targetId ||
-                    targetId === "#"
-                ) {
-                    return;
-                }
-
-
-                const target =
-                    document.querySelector(targetId);
-
-
-                if (target) {
-
-                    event.preventDefault();
-
-                    target.scrollIntoView({
-
-                        behavior: "smooth",
-                        block: "start"
-
-                    });
-
-                }
-
-            }
-        );
-
-    });
-
-
-// ==========================================
-// 7. INITIALIZE WEBSITE
-// ==========================================
-
-// Load saved language
-changeLanguage(currentLanguage);
-
 // Load saved theme
 applyTheme();
 
 
-// ==========================================
-// END OF CIVIC FIX MAIN JAVASCRIPT
-// ==========================================
+// ==============================
+// 3. SCROLL REVEAL ANIMATIONS
+// ==============================
+
+function initializeRevealAnimations() {
+
+    const revealElements =
+        document.querySelectorAll(".reveal");
+
+    // Browser compatibility fallback
+    if (!("IntersectionObserver" in window)) {
+
+        revealElements.forEach(element => {
+            element.classList.add("visible");
+        });
+
+        return;
+    }
+
+    const revealObserver = new IntersectionObserver(
+
+        (entries, observer) => {
+
+            entries.forEach(entry => {
+
+                if (entry.isIntersecting) {
+
+                    entry.target.classList.add("visible");
+
+                    observer.unobserve(entry.target);
+
+                }
+
+            });
+
+        },
+
+        {
+            threshold: 0.10,
+            rootMargin: "0px 0px 40px 0px"
+        }
+
+    );
+
+    revealElements.forEach(element => {
+
+        revealObserver.observe(element);
+
+    });
+
+}
+
+
+// Initialize scroll animations
+if (document.readyState === "loading") {
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        initializeRevealAnimations
+    );
+
+} else {
+
+    initializeRevealAnimations();
+
+}
+
+// ==============================
+// FAQ ACCORDION
+// ==============================
+
+document.querySelectorAll(".faq-question").forEach(button => {
+
+    button.addEventListener("click", function () {
+
+        const faqItem = this.closest(".faq-item");
+
+        if (!faqItem) return;
+
+        const isOpen = faqItem.classList.contains("active");
+
+        // Toggle the FAQ item
+        faqItem.classList.toggle("active");
+
+        // Update accessibility state
+        this.setAttribute("aria-expanded", String(!isOpen));
+
+    });
+
+});

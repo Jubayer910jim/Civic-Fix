@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Civic Fix</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background: #f3f7f5;
+            font-family: Arial, sans-serif;
+            color: #18332b;
+        }
+
+        .register-header {
+            width: 100%;
+            padding: 18px 6%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            box-shadow: 0 2px 12px rgba(0,0,0,.06);
+        }
+
+        .brand {
+            color: #087b50;
+            font-size: 25px;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .header-actions a {
+            color: #087b50;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .language-button {
+            border: 1px solid #d5e4dc;
+            background: #fff;
+            color: #087b50;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .register-container {
+            width: min(1000px, 92%);
+            min-height: 620px;
+            margin: 45px auto;
+            display: grid;
+            grid-template-columns: 0.9fr 1.1fr;
+            background: #fff;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 45px rgba(15, 55, 39, .10);
+        }
+
+        .register-info {
+            padding: 55px 40px;
+            color: white;
+            background: linear-gradient(145deg, #087b50, #075c43);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .register-info h1 {
+            font-size: 35px;
+            line-height: 1.2;
+            margin: 0 0 18px;
+        }
+
+        .register-info p {
+            line-height: 1.8;
+            color: #e0f5eb;
+            margin: 0;
+        }
+
+        .info-points {
+            margin-top: 35px;
+            display: grid;
+            gap: 18px;
+        }
+
+        .info-point {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            color: #f0fff7;
+            font-size: 14px;
+        }
+
+        .info-icon {
+            width: 35px;
+            height: 35px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: rgba(255,255,255,.15);
+            flex-shrink: 0;
+        }
+
+        .register-form-area {
+            padding: 45px 48px;
+        }
+
+        .form-heading {
+            margin-bottom: 25px;
+        }
+
+        .form-heading h2 {
+            margin: 0 0 8px;
+            font-size: 27px;
+            color: #173c2e;
+        }
+
+        .form-heading p {
+            margin: 0;
+            color: #718078;
+            font-size: 14px;
+        }
+
+        .google-button {
+            width: 100%;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            border: 1px solid #dce5df;
+            border-radius: 9px;
+            background: #fff;
+            color: #29352f;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .25s;
+        }
+
+        .google-button:hover {
+            background: #f7faf8;
+            border-color: #9db9aa;
+            transform: translateY(-1px);
+        }
+
+        .google-g {
+            font-size: 21px;
+            font-weight: 800;
+            color: #4285f4;
+        }
+
+        .separator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 22px 0;
+            color: #98a39d;
+            font-size: 12px;
+        }
+
+        .separator::before,
+        .separator::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #e7ece8;
+        }
+
+        .method-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 5px;
+            background: #f0f5f2;
+            border-radius: 10px;
+            margin-bottom: 22px;
+        }
+
+        .method-tab {
+            padding: 11px 8px;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: #66756d;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .method-tab.active {
+            color: #087b50;
+            background: #fff;
+            box-shadow: 0 2px 7px rgba(0,0,0,.07);
+        }
+
+        .form-group {
+            margin-bottom: 17px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34483e;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .form-group input {
+            width: 100%;
+            height: 47px;
+            padding: 0 13px;
+            border: 1px solid #dce5df;
+            border-radius: 8px;
+            outline: none;
+            font-size: 14px;
+            color: #263c31;
+            background: #fff;
+            transition: .2s;
+        }
+
+        .form-group input:focus {
+            border-color: #0b9863;
+            box-shadow: 0 0 0 3px rgba(11,152,99,.10);
+        }
+
+        .phone-input {
+            display: flex;
+            align-items: center;
+            border: 1px solid #dce5df;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .phone-prefix {
+            height: 47px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            background: #f3f7f5;
+            border-right: 1px solid #dce5df;
+            color: #34483e;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .phone-input input {
+            border: 0;
+            box-shadow: none !important;
+        }
+
+        .password-note {
+            display: block;
+            margin-top: 7px;
+            font-size: 11px;
+            color: #819087;
+        }
+
+        .primary-button {
+            width: 100%;
+            min-height: 49px;
+            margin-top: 5px;
+            border: 0;
+            border-radius: 9px;
+            background: linear-gradient(135deg, #0c9862, #08734d);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .25s;
+        }
+
+        .primary-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 16px rgba(8,123,80,.20);
+        }
+
+        .primary-button:disabled,
+        .google-button:disabled {
+            opacity: .65;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-message {
+            display: none;
+            padding: 11px 13px;
+            margin: 0 0 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .form-message.error {
+            display: block;
+            color: #a52828;
+            background: #fff0f0;
+            border: 1px solid #ffd4d4;
+        }
+
+        .form-message.success {
+            display: block;
+            color: #087b50;
+            background: #edfaf3;
+            border: 1px solid #c9edda;
+        }
+
+        .login-link {
+            margin-top: 22px;
+            text-align: center;
+            color: #78857e;
+            font-size: 13px;
+        }
+
+        .login-link a {
+            color: #087b50;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .otp-description {
+            margin: 0 0 22px;
+            color: #718078;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .back-button {
+            display: block;
+            margin: 15px auto 0;
+            padding: 8px;
+            border: 0;
+            background: transparent;
+            color: #087b50;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 760px) {
+            .register-container {
+                grid-template-columns: 1fr;
+                margin: 25px auto;
+            }
+
+            .register-info {
+                padding: 30px 25px;
+            }
+
+            .register-info h1 {
+                font-size: 27px;
+            }
+
+            .info-points {
+                grid-template-columns: 1fr;
+                margin-top: 22px;
+            }
+
+            .register-form-area {
+                padding: 32px 25px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .register-header {
+                padding: 15px 4%;
+            }
+
+            .brand {
+                font-size: 21px;
+            }
+
+            .header-actions {
+                gap: 10px;
+            }
+
+            .header-actions a {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="register-header">
+    <a href="index.html" class="brand">Civic Fix</a>
+
+    <div class="header-actions">
+        <a href="index.html" data-en="Home" data-bn="হোম">Home</a>
+        <button class="language-button" id="languageToggle" type="button">বাংলা</button>
+    </div>
+</header>
+
+<main class="register-container">
+
+    <section class="register-info">
+        <h1 data-en="Make your community better." data-bn="আপনার কমিউনিটিকে আরও সুন্দর করুন।">
+            Make your community better.
+        </h1>
+
+        <p data-en="Join Civic Fix and help report local problems, follow their progress, and make your neighbourhood safer and cleaner."
+           data-bn="Civic Fix-এ যোগ দিন। এলাকার সমস্যা জানান, সমাধানের অগ্রগতি দেখুন এবং আপনার এলাকাকে আরও নিরাপদ ও পরিচ্ছন্ন করতে সাহায্য করুন।">
+            Join Civic Fix and help report local problems, follow their progress, and make your neighbourhood safer and cleaner.
+        </p>
+
+        <div class="info-points">
+            <div class="info-point">
+                <span class="info-icon">✓</span>
+                <span data-en="Report community problems" data-bn="এলাকার সমস্যা জানান">Report community problems</span>
+            </div>
+
+            <div class="info-point">
+                <span class="info-icon">✓</span>
+                <span data-en="Track your submitted reports" data-bn="আপনার জমা দেওয়া রিপোর্টের অগ্রগতি দেখুন">Track your submitted reports</span>
+            </div>
+
+            <div class="info-point">
+                <span class="info-icon">✓</span>
+                <span data-en="Help build a better Bangladesh" data-bn="একটি উন্নত বাংলাদেশ গড়তে সাহায্য করুন">Help build a better Bangladesh</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="register-form-area">
+
+        <!-- REGISTRATION VIEW -->
+        <div id="registrationView">
+
+            <div class="form-heading">
+                <h2 data-en="Create your account" data-bn="আপনার অ্যাকাউন্ট তৈরি করুন">
+                    Create your account
+                </h2>
+                <p data-en="Register to become a Civic Fix citizen."
+                   data-bn="Civic Fix-এর নাগরিক হিসেবে নিবন্ধন করুন।">
+                    Register to become a Civic Fix citizen.
+                </p>
+            </div>
+
+            <div id="registerMessage" class="form-message" role="alert"></div>
+
+            <button type="button" class="google-button" id="googleRegister">
+                <span class="google-g">G</span>
+                <span data-en="Continue with Google" data-bn="Google দিয়ে চালিয়ে যান">
+                    Continue with Google
+                </span>
+            </button>
+
+            <div class="separator">
+                <span data-en="OR REGISTER WITH" data-bn="অথবা নিবন্ধন করুন">OR REGISTER WITH</span>
+            </div>
+
+            <div class="method-tabs">
+                <button type="button" class="method-tab active" id="emailTab"
+                        data-en="Email" data-bn="ইমেইল">Email</button>
+
+                <button type="button" class="method-tab" id="phoneTab"
+                        data-en="Phone (+880)" data-bn="ফোন (+880)">Phone (+880)</button>
+            </div>
+
+            <form id="registerForm">
+
+                <div class="form-group">
+                    <label for="fullName" data-en="Full name" data-bn="পুরো নাম">Full name</label>
+                    <input type="text" id="fullName" name="fullName"
+                           placeholder="Enter your full name" required maxlength="100">
+                </div>
+
+                <div class="form-group" id="emailGroup">
+                    <label for="email" data-en="Email address" data-bn="ইমেইল ঠিকানা">Email address</label>
+                    <input type="email" id="email" name="email"
+                           placeholder="example@gmail.com" autocomplete="email">
+                </div>
+
+                <div class="form-group hidden" id="phoneGroup">
+                    <label for="phone" data-en="Bangladesh mobile number" data-bn="বাংলাদেশি মোবাইল নম্বর">
+                        Bangladesh mobile number
+                    </label>
+
+                    <div class="phone-input">
+                        <span class="phone-prefix">+880</span>
+                        <input type="tel" id="phone" name="phone"
+                               placeholder="1XXXXXXXXX"
+                               inputmode="numeric" maxlength="10"
+                               autocomplete="tel-national">
+                    </div>
+
+                    <small class="password-note"
+                           data-en="Enter 10 digits after +880. Example: 1712345678"
+                           data-bn="+৮৮০-এর পর ১০টি সংখ্যা লিখুন। উদাহরণ: 1712345678">
+                        Enter 10 digits after +880. Example: 1712345678
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" data-en="Password" data-bn="পাসওয়ার্ড">Password</label>
+                    <input type="password" id="password" name="password"
+                           placeholder="Create a password" minlength="8"
+                           autocomplete="new-password" required>
+
+                    <small class="password-note"
+                           data-en="Password must contain at least 8 characters."
+                           data-bn="পাসওয়ার্ডে কমপক্ষে ৮টি অক্ষর থাকতে হবে।">
+                        Password must contain at least 8 characters.
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword" data-en="Confirm password" data-bn="পাসওয়ার্ড নিশ্চিত করুন">
+                        Confirm password
+                    </label>
+                    <input type="password" id="confirmPassword" name="confirmPassword"
+                           placeholder="Enter your password again"
+                           minlength="8" autocomplete="new-password" required>
+                </div>
+
+                <button type="submit" class="primary-button" id="registerButton"
+                        data-en="Create Account" data-bn="অ্যাকাউন্ট তৈরি করুন">
+                    Create Account
+                </button>
+            </form>
+
+            <div class="login-link">
+                <span data-en="Already have an account?" data-bn="আগেই অ্যাকাউন্ট আছে?">
+                    Already have an account?
+                </span>
+                <a href="login.html" data-en="Login" data-bn="লগইন">Login</a>
+            </div>
+        </div>
+
+        <!-- OTP VERIFICATION VIEW -->
+        <div id="otpView" class="hidden">
+
+            <div class="form-heading">
+                <h2 data-en="Verify your account" data-bn="আপনার অ্যাকাউন্ট যাচাই করুন">
+                    Verify your account
+                </h2>
+            </div>
+
+            <p class="otp-description" id="otpDescription">
+                Enter the verification code sent to your contact.
+            </p>
+
+            <div id="otpMessage" class="form-message" role="alert"></div>
+
+            <form id="otpForm">
+                <div class="form-group">
+                    <label for="otp" data-en="Verification code" data-bn="যাচাইকরণ কোড">
+                        Verification code
+                    </label>
+
+                    <input type="text" id="otp" name="otp"
+                           placeholder="Enter 6-digit OTP"
+                           inputmode="numeric" pattern="[0-9]{6}"
+                           maxlength="6" required>
+                </div>
+
+                <button type="submit" class="primary-button" id="verifyButton"
+                        data-en="Verify & Continue" data-bn="যাচাই করে চালিয়ে যান">
+                    Verify & Continue
+                </button>
+            </form>
+
+            <button type="button" class="back-button" id="resendOtp"
+                    data-en="Resend OTP" data-bn="আবার OTP পাঠান">
+                Resend OTP
+            </button>
+
+            <button type="button" class="back-button" id="backToRegister"
+                    data-en="Back to registration" data-bn="নিবন্ধনে ফিরে যান">
+                Back to registration
+            </button>
+        </div>
+
+    </section>
+</main>
+
+<script>
+    /*
+      BACKEND ENDPOINTS REQUIRED:
+
+      POST /api/auth/register
+      POST /api/auth/verify-otp
+      POST /api/auth/resend-otp
+      GET  /api/auth/pending-registration
+      GET  /auth/google
+
+      These routes must be implemented in server.js / backend.
+    */
+
+    const registrationView = document.getElementById("registrationView");
+    const otpView = document.getElementById("otpView");
+
+    const registerForm = document.getElementById("registerForm");
+    const otpForm = document.getElementById("otpForm");
+
+    const registerMessage = document.getElementById("registerMessage");
+    const otpMessage = document.getElementById("otpMessage");
+
+    const emailTab = document.getElementById("emailTab");
+    const phoneTab = document.getElementById("phoneTab");
+
+    const emailGroup = document.getElementById("emailGroup");
+    const phoneGroup = document.getElementById("phoneGroup");
+
+    let registrationMethod = "email";
+    let currentVerificationMethod = "email";
+
+    function showMessage(element, message, type) {
+        element.textContent = message;
+        element.className = "form-message " + type;
+    }
+
+    function clearMessage(element) {
+        element.textContent = "";
+        element.className = "form-message";
+    }
+
+    function setMethod(method) {
+        registrationMethod = method;
+
+        clearMessage(registerMessage);
+
+        const isEmail = method === "email";
+
+        emailGroup.classList.toggle("hidden", !isEmail);
+        phoneGroup.classList.toggle("hidden", isEmail);
+
+        document.getElementById("email").required = isEmail;
+        document.getElementById("phone").required = !isEmail;
+
+        emailTab.classList.toggle("active", isEmail);
+        phoneTab.classList.toggle("active", !isEmail);
+    }
+
+    emailTab.addEventListener("click", () => setMethod("email"));
+    phoneTab.addEventListener("click", () => setMethod("phone"));
+
+    function showOtpScreen(method, destination) {
+        currentVerificationMethod = method;
+
+        registrationView.classList.add("hidden");
+        otpView.classList.remove("hidden");
+
+        const destinationText = destination || "your registered contact";
+
+        document.getElementById("otpDescription").textContent =
+            method === "phone"
+                ? "Enter the 6-digit SMS verification code sent to " + destinationText + "."
+                : "Enter the 6-digit verification code sent to " + destinationText + ". Check your inbox and spam folder.";
+
+        clearMessage(otpMessage);
+        document.getElementById("otp").value = "";
+    }
+
+    function showRegistrationScreen() {
+        otpView.classList.add("hidden");
+        registrationView.classList.remove("hidden");
+        clearMessage(otpMessage);
+    }
+
+    // CREATE ACCOUNT
+    registerForm.addEventListener("submit", async function(event) {
+        event.preventDefault();
+        clearMessage(registerMessage);
+
+        const fullName = document.getElementById("fullName").value.trim();
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+
+        if (password.length < 8) {
+            showMessage(registerMessage,
+                "Password must be at least 8 characters long.", "error");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            showMessage(registerMessage,
+                "The passwords do not match.", "error");
+            return;
+        }
+
+        let contact = {};
+
+        if (registrationMethod === "email") {
+            const email = document.getElementById("email").value.trim();
+
+            if (!email) {
+                showMessage(registerMessage, "Please enter your email address.", "error");
+                return;
+            }
+
+            contact = { email };
+        } else {
+            const phone = document.getElementById("phone").value.trim();
+
+            if (!/^1[3-9][0-9]{8}$/.test(phone)) {
+                showMessage(registerMessage,
+                    "Enter a valid Bangladesh mobile number with 10 digits after +880.",
+                    "error");
+                return;
+            }
+
+            contact = { phone: "+880" + phone };
+        }
+
+        const button = document.getElementById("registerButton");
+        button.disabled = true;
+        button.textContent = "Please wait...";
+
+        try {
+            const response = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    fullName,
+                    password,
+                    method: registrationMethod,
+                    ...contact
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Registration failed.");
+            }
+
+            showOtpScreen(
+                registrationMethod,
+                data.destination || contact.email || contact.phone
+            );
+
+        } catch (error) {
+            showMessage(registerMessage,
+                error.message || "Could not connect to the server.", "error");
+        } finally {
+            button.disabled = false;
+            button.textContent = "Create Account";
+        }
+    });
+
+    // VERIFY OTP
+    otpForm.addEventListener("submit", async function(event) {
+        event.preventDefault();
+        clearMessage(otpMessage);
+
+        const otp = document.getElementById("otp").value.trim();
+
+        if (!/^[0-9]{6}$/.test(otp)) {
+            showMessage(otpMessage, "Please enter a valid 6-digit OTP.", "error");
+            return;
+        }
+
+        const button = document.getElementById("verifyButton");
+        button.disabled = true;
+        button.textContent = "Verifying...";
+
+        try {
+            const response = await fetch("/api/auth/verify-otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    otp,
+                    method: currentVerificationMethod
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "OTP verification failed.");
+            }
+
+            // The backend should create the authenticated session here.
+            window.location.href = data.redirect || "citizen.html";
+
+        } catch (error) {
+            showMessage(otpMessage,
+                error.message || "Could not verify the OTP.", "error");
+        } finally {
+            button.disabled = false;
+            button.textContent = "Verify & Continue";
+        }
+    });
+
+    // RESEND OTP
+    document.getElementById("resendOtp").addEventListener("click", async function() {
+        clearMessage(otpMessage);
+
+        try {
+            const response = await fetch("/api/auth/resend-otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ method: currentVerificationMethod })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Could not resend OTP.");
+            }
+
+            showMessage(otpMessage,
+                data.message || "A new OTP has been sent.", "success");
+
+        } catch (error) {
+            showMessage(otpMessage, error.message, "error");
+        }
+    });
+
+    document.getElementById("backToRegister").addEventListener("click", function() {
+        showRegistrationScreen();
+    });
+
+    // GOOGLE REGISTRATION
+    document.getElementById("googleRegister").addEventListener("click", function() {
+        // The backend must handle Google OAuth, then send an email OTP
+        // and redirect back to this page with ?step=verify&method=google.
+        window.location.href = "/auth/google";
+    });
+
+    // GOOGLE OAUTH RETURN
+    async function checkGoogleVerification() {
+        const params = new URLSearchParams(window.location.search);
+
+        if (params.get("step") !== "verify" ||
+            params.get("method") !== "google") {
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/auth/pending-registration", {
+                credentials: "include"
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Could not load Google registration.");
+            }
+
+            showOtpScreen("google", data.email || "your Google email");
+
+        } catch (error) {
+            showRegistrationScreen();
+            showMessage(registerMessage, error.message, "error");
+        }
+    }
+
+    // ENGLISH / BANGLA
+    const languageToggle = document.getElementById("languageToggle");
+
+    function setLanguage(language) {
+        document.documentElement.lang = language;
+
+        document.querySelectorAll("[data-en][data-bn]").forEach(element => {
+            element.textContent =
+                language === "bn" ? element.dataset.bn : element.dataset.en;
+        });
+
+        languageToggle.textContent = language === "en" ? "বাংলা" : "English";
+        localStorage.setItem("civicFixLanguage", language);
+    }
+
+    languageToggle.addEventListener("click", function() {
+        const current = localStorage.getItem("civicFixLanguage") || "en";
+        setLanguage(current === "en" ? "bn" : "en");
+    });
+
+    setLanguage(localStorage.getItem("civicFixLanguage") || "en");
+    checkGoogleVerification();
+</script>
+
+</body>
+</html>
