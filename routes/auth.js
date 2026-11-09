@@ -3,6 +3,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const { OAuth2Client } = require("google-auth-library");
 const db = require("../config/db");
 
 const router = express.Router();
@@ -18,7 +19,10 @@ function createEmailTransporter() {
     }
 
     return nodemailer.createTransport({
-        service: "gmail",
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        requireTLS: true,
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_APP_PASSWORD
@@ -89,13 +93,10 @@ router.post("/register", async (req, res) => {
     let createdUserId = null;
 
     try {
-        const { fullName, email, password, method } = req.body;
+        const { fullName, email, phone, password, method } = req.body;
 
-        if (method !== "email") {
-            return res.status(400).json({
-                success: false,
-                message: "Email registration is currently available."
-            });
+        if (method !== "email" && method !== "phone") {
+            return res.status(400).json({ success: false, message: "Choose email or phone registration." });
         }
 
         if (
@@ -109,16 +110,6 @@ router.post("/register", async (req, res) => {
             });
         }
 
-        if (
-            typeof email !== "string" ||
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: "Please enter a valid email address."
-            });
-        }
-
         if (typeof password !== "string" || password.length < 8) {
             return res.status(400).json({
                 success: false,
@@ -126,9 +117,30 @@ router.post("/register", async (req, res) => {
             });
         }
 
-        const normalizedEmail = email.trim().toLowerCase();
-
         connection = await db.getConnection();
+
+        if (method === "phone") {
+            const digits = typeof phone === "string" ? phone.replace(/\D/g, "") : "";
+            const national = digits.startsWith("880") ? digits.slice(3) : (digits.startsWith("0") ? digits.slice(1) : digits);
+            if (!/^1[3-9]\d{8}$/.test(national)) return res.status(400).json({ success: false, message: "Enter a valid Bangladesh mobile number." });
+            const normalizedPhone = "+880" + national;
+            const [existing] = await connection.execute("SELECT user_id FROM users WHERE phone = ? LIMIT 1", [normalizedPhone]);
+            if (existing.length) return res.status(409).json({ success: false, message: "An account with this phone already exists. Please log in instead." });
+            const passwordHash = await bcrypt.hash(password, 12);
+            const [insert] = await connection.execute(
+                `INSERT INTO users (full_name, phone, password_hash, auth_provider, role, account_status, phone_verified)
+                 VALUES (?, ?, ?, 'phone', 'citizen', 'active', 0)`,
+                [fullName.trim(), normalizedPhone, passwordHash]
+            );
+            const userId = insert.insertId;
+            await new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
+            req.session.user = { user_id: userId, full_name: fullName.trim(), email: null, phone: normalizedPhone, role: "citizen" };
+            await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
+            return res.status(201).json({ success: true, message: "Phone account created successfully.", redirect: "/citizen.html" });
+        }
+
+        if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return res.status(400).json({ success: false, message: "Please enter a valid email address." });
+        const normalizedEmail = email.trim().toLowerCase();
 
         const [existingUsers] = await connection.execute(
             "SELECT user_id FROM users WHERE email = ? LIMIT 1",
@@ -203,6 +215,115 @@ router.post("/register", async (req, res) => {
             message: "Unable to register your account. Please try again."
         });
 
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+// POST /api/auth/google - verify a Google ID token and create/sign in a citizen.
+router.post("/google", async (req, res) => {
+    const { credential } = req.body || {};
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+
+    if (!clientId) {
+        return res.status(503).json({ success: false, message: "Google sign-in is not configured on the server." });
+    }
+    if (typeof credential !== "string" || credential.length < 20) {
+        return res.status(400).json({ success: false, message: "Google did not return a valid sign-in credential." });
+    }
+
+    let payload;
+    try {
+        const client = new OAuth2Client(clientId);
+        const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId });
+        payload = ticket.getPayload();
+        if (!payload || !payload.sub || !payload.email || payload.email_verified !== true) {
+            return res.status(401).json({ success: false, message: "Use a Google account with a verified email address." });
+        }
+    } catch (error) {
+        console.error("Google token verification failed:", error.message);
+        return res.status(401).json({ success: false, message: "Google sign-in could not be verified. Please try again." });
+    }
+
+    let connection;
+    try {
+        const googleId = payload.sub;
+        const normalizedEmail = payload.email.trim().toLowerCase();
+        const fullName = (typeof payload.name === "string" && payload.name.trim()
+            ? payload.name.trim()
+            : normalizedEmail.split("@")[0]).slice(0, 100);
+
+        connection = await db.getConnection();
+
+        let [users] = await connection.execute(
+            `SELECT user_id, full_name, email, phone, role, account_status
+             FROM users WHERE google_id = ? LIMIT 1`,
+            [googleId]
+        );
+
+        if (users.length === 0) {
+            const [emailMatches] = await connection.execute(
+                "SELECT user_id FROM users WHERE email = ? LIMIT 1",
+                [normalizedEmail]
+            );
+            if (emailMatches.length > 0) {
+                return res.status(409).json({
+                    success: false,
+                    message: "An account already uses this email. Sign in with that account's existing method; Google account linking is not available yet."
+                });
+            }
+
+            // The application requires a password_hash; this random hash is never shown or used for Google sign-in.
+            const unusablePasswordHash = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
+            const [insert] = await connection.execute(
+                `INSERT INTO users
+                    (full_name, email, google_id, password_hash, auth_provider,
+                     role, account_status, email_verified)
+                 VALUES (?, ?, ?, ?, 'google', 'citizen', 'active', 1)`,
+                [fullName, normalizedEmail, googleId, unusablePasswordHash]
+            );
+
+            users = [{
+                user_id: insert.insertId,
+                full_name: fullName,
+                email: normalizedEmail,
+                phone: null,
+                role: "citizen",
+                account_status: "active"
+            }];
+        }
+
+        const user = users[0];
+        if (user.role !== "citizen") {
+            return res.status(403).json({ success: false, message: "Google sign-in is available for citizen accounts only." });
+        }
+        if (user.account_status !== "active") {
+            return res.status(403).json({ success: false, message: "This account is not active. Contact an administrator for help." });
+        }
+
+        await new Promise((resolve, reject) => {
+            req.session.regenerate(error => error ? reject(error) : resolve());
+        });
+        req.session.user = {
+            user_id: user.user_id,
+            full_name: user.full_name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role
+        };
+        await new Promise((resolve, reject) => {
+            req.session.save(error => error ? reject(error) : resolve());
+        });
+
+        return res.json({
+            success: true,
+            message: "Google sign-in successful.",
+            user: { user_id: user.user_id, full_name: user.full_name, email: user.email, role: user.role },
+            redirect: "/citizen.html"
+        });
+    } catch (error) {
+        console.error("Google sign-in error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to sign in with Google. Please try again." });
     } finally {
         if (connection) connection.release();
     }

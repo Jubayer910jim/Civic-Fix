@@ -36,6 +36,10 @@
         href="css/login.css"
     >
 
+<style>
+.login-method-button{padding:8px 14px;border:1px solid #cbd5d1;border-radius:6px;background:#fff;color:#263b33;cursor:pointer}
+.login-method-button[aria-pressed="true"]{background:#087b50;border-color:#087b50;color:#fff}
+</style>
 </head>
 
 
@@ -235,21 +239,14 @@
 
                     <div class="form-group">
 
-                        <label for="email">
-
-                            Email Address
-
-                        </label>
-
-
-                        <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            placeholder="Enter your email address"
-                            autocomplete="email"
-                            required
-                        >
+                        <div style="display:flex;gap:8px;margin-bottom:10px" id="loginMethodToggle" role="group" aria-label="Sign-in method">
+                            <button type="button" class="login-method-button" id="loginEmailTab" aria-pressed="true">Email</button>
+                            <button type="button" class="login-method-button" id="loginPhoneTab" aria-pressed="false">Phone</button>
+                        </div>
+                        <label for="email" id="identifierLabel">Email Address</label>
+                        <div id="phonePrefix" style="display:none;margin-bottom:6px;color:#456">+880</div>
+                        <input type="email" id="email" name="identifier"
+                            placeholder="Enter your email address" autocomplete="email" required>
 
                     </div>
 
@@ -341,7 +338,7 @@
 
                     <p>
 
-                        Use your registered email and password
+                        Use your registered email or phone number and password
                         to access your assigned portal.
 
                     </p>

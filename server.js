@@ -662,31 +662,26 @@ app.post(
 
         try {
 
-            const {
-                email,
-                password
-            } = req.body;
+            const { email, phone, method, password } = req.body;
+            const loginMethod = method === "phone" ? "phone" : "email";
+            let loginValue = loginMethod === "phone" ? phone : email;
 
+            if (typeof loginValue !== "string" || loginValue.trim().length === 0) {
+                return res.status(400).json({ success: false, message: loginMethod === "phone" ? "Please enter your phone number." : "Please enter your email." });
+            }
 
-            // Validate email
-
-            if (
-                typeof email !== "string" ||
-
-                email.trim().length === 0
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        message:
-                            "Please enter your email."
-
-                    });
-
+            if (loginMethod === "phone") {
+                const digits = loginValue.replace(/\D/g, "");
+                const national = digits.startsWith("880") ? digits.slice(3) : (digits.startsWith("0") ? digits.slice(1) : digits);
+                if (!/^1[3-9]\d{8}$/.test(national)) {
+                    return res.status(400).json({ success: false, message: "Please enter a valid Bangladesh mobile number." });
+                }
+                loginValue = "+880" + national;
+            } else {
+                loginValue = loginValue.trim().toLowerCase();
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginValue)) {
+                    return res.status(400).json({ success: false, message: "Please enter a valid email address." });
+                }
             }
 
 
@@ -721,16 +716,17 @@ app.post(
                         user_id,
                         full_name,
                         email,
+                        phone,
                         password_hash,
                         role,
                        
                         account_status
                     FROM users
-                    WHERE email = ?
+                    WHERE ${loginMethod === "phone" ? "phone" : "email"} = ?
                     LIMIT 1
                     `,
                     [
-                        email.trim()
+                        loginValue
                     ]
                 );
 

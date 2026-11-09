@@ -14,6 +14,13 @@ const loginForm =
 const emailInput =
     document.getElementById("email");
 
+let loginMethod = "email";
+const emailTab = document.getElementById("loginEmailTab");
+const phoneTab = document.getElementById("loginPhoneTab");
+const identifierLabel = document.getElementById("identifierLabel");
+const phonePrefix = document.getElementById("phonePrefix");
+const methodToggle = document.getElementById("loginMethodToggle");
+
 const passwordInput =
     document.getElementById("password");
 
@@ -162,6 +169,7 @@ function setupPortalDesign() {
 
         loginButtonText.textContent =
             "Login as Admin";
+        methodToggle.hidden = true;
 
     }
 
@@ -282,7 +290,7 @@ loginForm.addEventListener(
 
         // Get values
 
-        const email =
+        const identifier =
             emailInput.value.trim();
 
 
@@ -294,11 +302,11 @@ loginForm.addEventListener(
         // VALIDATION
         // ==========================================
 
-        if (!email) {
+        if (!identifier) {
 
 
             showMessage(
-                "Please enter your email address."
+                loginMethod === "phone" ? "Please enter your phone number." : "Please enter your email address."
             );
 
 
@@ -360,7 +368,7 @@ loginForm.addEventListener(
 
                         body:
                             JSON.stringify({
-                                email: email,
+                                ...(loginMethod === "phone" ? { phone: identifier, method: "phone" } : { email: identifier, method: "email" }),
                                 password: password,
                                 role: selectedRole
                             })

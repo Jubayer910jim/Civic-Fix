@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register | Civic Fix</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <link rel="stylesheet" href="css/style.css">
 
@@ -137,32 +138,11 @@
             font-size: 14px;
         }
 
-        .google-button {
+        .google-signin-container {
             width: 100%;
-            min-height: 48px;
+            min-height: 44px;
             display: flex;
-            align-items: center;
             justify-content: center;
-            gap: 12px;
-            border: 1px solid #dce5df;
-            border-radius: 9px;
-            background: #fff;
-            color: #29352f;
-            font-weight: 700;
-            cursor: pointer;
-            transition: .25s;
-        }
-
-        .google-button:hover {
-            background: #f7faf8;
-            border-color: #9db9aa;
-            transform: translateY(-1px);
-        }
-
-        .google-g {
-            font-size: 21px;
-            font-weight: 800;
-            color: #4285f4;
         }
 
         .separator {
@@ -460,12 +440,7 @@
 
                 <div id="registerMessage" class="form-message" role="alert"></div>
 
-                <button type="button" class="google-button" id="googleRegister">
-                    <span class="google-g">G</span>
-                    <span data-en="Continue with Google" data-bn="Google দিয়ে চালিয়ে যান">
-                        Continue with Google
-                    </span>
-                </button>
+                <div class="google-signin-container" id="googleRegister" aria-label="Continue with Google"></div>
 
                 <div class="separator">
                     <span data-en="OR REGISTER WITH" data-bn="অথবা নিবন্ধন করুন">OR REGISTER WITH</span>
@@ -609,6 +584,7 @@
         const verifyButton = document.getElementById("verifyButton");
         const resendButton = document.getElementById("resendOtp");
 
+        const GOOGLE_CLIENT_ID = "739688046500-notkt1q3m2ptdaq7eej1kebkj3g7mqbl.apps.googleusercontent.com";
         let registrationMethod = "email";
         let currentLanguage = localStorage.getItem("civicFixLanguage") || "en";
 
@@ -619,6 +595,8 @@
                 invalidEmail: "Please enter a valid email address.",
                 invalidPhone: "Enter a valid Bangladesh mobile number.",
                 emailOnly: "Email registration is available now. Phone registration is coming soon.",
+                phoneSuccess: "Phone account created. Redirecting to your portal...",
+                googleConfig: "Google sign-in is not configured. Add your Google Web Client ID first.",
                 registerFailed: "Registration failed.",
                 verifyFailed: "OTP verification failed.",
                 connectionError: "Could not connect to the server.",
@@ -639,6 +617,8 @@
                 invalidEmail: "সঠিক ইমেইল ঠিকানা লিখুন।",
                 invalidPhone: "সঠিক বাংলাদেশি মোবাইল নম্বর লিখুন।",
                 emailOnly: "ইমেইল নিবন্ধন এখন চালু আছে। ফোন নিবন্ধন শীঘ্রই আসছে।",
+                phoneSuccess: "ফোন অ্যাকাউন্ট তৈরি হয়েছে। পোর্টালে নেওয়া হচ্ছে...",
+                googleConfig: "Google sign-in সেটআপ করা নেই। আগে Google Web Client ID যোগ করুন।",
                 registerFailed: "নিবন্ধন সম্পন্ন হয়নি।",
                 verifyFailed: "OTP যাচাই করা যায়নি।",
                 connectionError: "সার্ভারের সাথে সংযোগ করা যায়নি।",
@@ -680,6 +660,8 @@
 
             document.getElementById("email").required = isEmail;
             document.getElementById("phone").required = !isEmail;
+            document.getElementById("email").value = "";
+            document.getElementById("phone").value = "";
 
             emailTab.classList.toggle("active", isEmail);
             phoneTab.classList.toggle("active", !isEmail);
@@ -767,11 +749,6 @@
             event.preventDefault();
             clearMessage(registerMessage);
 
-            if (registrationMethod !== "email") {
-                showMessage(registerMessage, t("emailOnly"), "error");
-                return;
-            }
-
             const fullName = document.getElementById("fullName").value.trim();
             const email = document.getElementById("email").value.trim();
             const password = document.getElementById("password").value;
@@ -787,8 +764,13 @@
                 return;
             }
 
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            const phone = document.getElementById("phone").value.trim();
+            if (registrationMethod === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                 showMessage(registerMessage, t("invalidEmail"), "error");
+                return;
+            }
+            if (registrationMethod === "phone" && !/^1[3-9][0-9]{8}$/.test(phone.replace(/\D/g, "").replace(/^0/, ""))) {
+                showMessage(registerMessage, t("invalidPhone"), "error");
                 return;
             }
 
@@ -804,9 +786,10 @@
                     credentials: "include",
                     body: JSON.stringify({
                         fullName,
-                        email,
+                        email: registrationMethod === "email" ? email : undefined,
+                        phone: registrationMethod === "phone" ? phone : undefined,
                         password,
-                        method: "email"
+                        method: registrationMethod
                     })
                 });
 
@@ -816,9 +799,13 @@
                     throw new Error(data.message || t("registerFailed"));
                 }
 
-                showOtpScreen(data.destination || email);
-
-                showMessage(otpMessage, data.message || t("otpSent"), "success");
+                if (registrationMethod === "phone") {
+                    showMessage(registerMessage, data.message || t("phoneSuccess"), "success");
+                    window.setTimeout(() => { window.location.href = data.redirect || "/citizen.html"; }, 700);
+                } else {
+                    showOtpScreen(data.destination || email);
+                    showMessage(otpMessage, data.message || t("otpSent"), "success");
+                }
 
             } catch (error) {
                 showMessage(
@@ -923,9 +910,54 @@
         });
 
         // GOOGLE REGISTRATION
-        document.getElementById("googleRegister").addEventListener("click", function () {
-            showMessage(registerMessage, t("googleSoon"), "error");
-        });
+        async function handleGoogleCredential(response) {
+            clearMessage(registerMessage);
+            if (!response || !response.credential) {
+                showMessage(registerMessage, "Google did not return a sign-in credential.", "error");
+                return;
+            }
+
+            const googleButton = document.getElementById("googleRegister");
+            googleButton.style.pointerEvents = "none";
+            try {
+                const result = await fetch("/api/auth/google", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ credential: response.credential })
+                });
+                const data = await result.json();
+                if (!result.ok || !data.success) throw new Error(data.message || "Google sign-in failed.");
+                showMessage(registerMessage, data.message || "Google sign-in successful.", "success");
+                window.setTimeout(() => { window.location.href = data.redirect || "/citizen.html"; }, 500);
+            } catch (error) {
+                showMessage(registerMessage, error.message || "Could not connect to the server.", "error");
+                googleButton.style.pointerEvents = "";
+            }
+        }
+
+        function initializeGoogleSignIn() {
+            if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+                window.setTimeout(initializeGoogleSignIn, 150);
+                return;
+            }
+
+            if (GOOGLE_CLIENT_ID.startsWith("YOUR_")) {
+                showMessage(registerMessage, t("googleConfig"), "error");
+                return;
+            }
+
+            window.google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleGoogleCredential
+            });
+            window.google.accounts.id.renderButton(
+                document.getElementById("googleRegister"),
+                { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: 320 }
+            );
+        }
+
+        initializeGoogleSignIn();
 
         // INITIALIZE
         setLanguage(currentLanguage);
