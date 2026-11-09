@@ -1,0 +1,845 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Civic Fix citizen portal - report and track community issues.">
+
+    <title>Citizen Portal | Civic Fix</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/citizen.css">
+</head>
+
+<body>
+
+    <div class="app-shell">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+
+            <a class="brand" href="citizen.html" aria-label="Civic Fix home">
+                <span class="brand-mark">
+                    <i></i><i></i><i></i><i></i>
+                </span>
+
+                <span class="brand-name">
+                    Civic<span>Fix</span>
+                    <small>COMMUNITY CARE PORTAL</small>
+                </span>
+            </a>
+
+            <div class="sidebar-label" data-en="WORKSPACE" data-bn="ওয়ার্কস্পেস">
+                WORKSPACE
+            </div>
+
+            <nav class="side-nav" aria-label="Main navigation">
+
+                <button class="nav-item active" data-section="overview">
+                    <span class="nav-icon">⌂</span>
+                    <span data-en="Overview" data-bn="ওভারভিউ">Overview</span>
+                </button>
+
+                <button class="nav-item" data-section="new-report">
+                    <span class="nav-icon">＋</span>
+                    <span data-en="Submit a complaint" data-bn="অভিযোগ জমা দিন">Submit a complaint</span>
+                    <span class="nav-count">+</span>
+                </button>
+
+                <button class="nav-item" data-section="my-reports">
+                    <span class="nav-icon">▤</span>
+                    <span data-en="My reports" data-bn="আমার অভিযোগ">My reports</span>
+                </button>
+
+                <button class="nav-item" data-section="notifications">
+                    <span class="nav-icon">♧</span>
+                    <span data-en="Notifications" data-bn="নোটিফিকেশন">Notifications</span>
+                    <span class="notification-dot"></span>
+                </button>
+
+            </nav>
+
+            <div class="sidebar-help">
+
+                <div class="help-icon">✦</div>
+
+                <strong data-en="Your voice matters" data-bn="আপনার মতামত গুরুত্বপূর্ণ">
+                    Your voice matters
+                </strong>
+
+                <p data-en="Together, we can make our communities better."
+                   data-bn="একসাথে আমরা আমাদের এলাকাকে আরও সুন্দর করতে পারি।">
+                    Together, we can make our communities better.
+                </p>
+
+                <button id="helpButton" class="text-button"
+                        data-en="How it works →" data-bn="যেভাবে কাজ করে →">
+                    How it works →
+                </button>
+
+            </div>
+
+            <div class="sidebar-bottom">
+
+                <div class="user-mini">
+
+                    <div class="avatar" id="citizenAvatarInitials">CF</div>
+
+                    <div class="user-mini-text">
+                        <strong id="citizenProfileName">Loading...</strong>
+
+                        <span data-en="Citizen account" data-bn="নাগরিক অ্যাকাউন্ট">
+                            Citizen account
+                        </span>
+                    </div>
+
+                    <button class="more-button" aria-label="Account options">
+                        •••
+                    </button>
+
+                </div>
+
+                <button class="logout-button" id="logoutButton">
+                    <span>↪</span>
+                    <span data-en="Back to homepage" data-bn="হোমপেজে ফিরুন">
+                        Back to homepage
+                    </span>
+                </button>
+
+            </div>
+
+        </aside>
+
+        <!-- MAIN AREA -->
+        <main class="main-area">
+
+            <!-- TOPBAR -->
+            <header class="topbar">
+
+                <button class="mobile-menu" id="mobileMenu" aria-label="Open menu">
+                    ☰
+                </button>
+
+                <div class="breadcrumb">
+                    <span data-en="Citizen Portal" data-bn="নাগরিক পোর্টাল">
+                        Citizen Portal
+                    </span>
+
+                    <b>/</b>
+
+                    <strong id="breadcrumbCurrent"
+                            data-en="Overview" data-bn="ওভারভিউ">
+                        Overview
+                    </strong>
+                </div>
+
+                <div class="topbar-actions">
+
+                    <button class="language-button" id="languageToggle"
+                            aria-label="Change language">
+                        বাংলা
+                    </button>
+
+                    <button class="icon-button" id="themeToggle"
+                            aria-label="Toggle theme">
+                        ☾
+                    </button>
+
+                    <button class="top-notification" data-section="notifications"
+                            aria-label="Notifications">
+                        ♧<i></i>
+                    </button>
+
+                    <div class="top-avatar" id="citizenTopAvatar">CF</div>
+
+                </div>
+
+            </header>
+
+            <!-- CONTENT -->
+            <div class="content-wrap">
+
+                <!-- OVERVIEW -->
+                <section class="page-section active" id="section-overview">
+
+                    <div class="welcome-row">
+
+                        <div>
+
+                            <div class="eyebrow">
+                                <span class="eyebrow-line"></span>
+
+                                <span data-en="YOUR COMMUNITY, YOUR VOICE"
+                                      data-bn="আপনার এলাকা, আপনার কণ্ঠস্বর">
+                                    YOUR COMMUNITY, YOUR VOICE
+                                </span>
+                            </div>
+
+                            <h1>
+                                <span id="greetingText">Good morning,</span>
+                                <br>
+                                <em id="citizenGreetingName">Loading...</em>
+                                <span class="wave">✦</span>
+                            </h1>
+
+                            <p class="welcome-copy"
+                               data-en="A better community starts with one small action. What would you like to improve today?"
+                               data-bn="একটি ছোট উদ্যোগ থেকেই সুন্দর এলাকার শুরু। আজ আপনি কী পরিবর্তন আনতে চান?">
+                                A better community starts with one small action. What would you like to improve today?
+                            </p>
+
+                        </div>
+
+                        <div class="welcome-art" aria-hidden="true">
+                            <div class="sun"></div>
+                            <div class="art-building building-one"></div>
+                            <div class="art-building building-two"></div>
+                            <div class="art-building building-three"></div>
+                            <div class="art-ground"></div>
+                            <div class="art-tree">✦</div>
+                        </div>
+
+                    </div>
+
+                    <button class="primary-cta" data-section="new-report">
+
+                        <span class="cta-plus">＋</span>
+
+                        <span>
+                            <strong data-en="Report a community issue"
+                                    data-bn="এলাকার সমস্যা জানান">
+                                Report a community issue
+                            </strong>
+
+                            <small data-en="It only takes a few minutes to make a difference."
+                                   data-bn="পরিবর্তন আনতে মাত্র কয়েক মিনিট সময় লাগবে।">
+                                It only takes a few minutes to make a difference.
+                            </small>
+                        </span>
+
+                        <span class="cta-arrow">→</span>
+
+                    </button>
+
+                    <div class="section-heading">
+
+                        <div>
+                            <h2 data-en="Your activity" data-bn="আপনার কার্যক্রম">
+                                Your activity
+                            </h2>
+
+                            <p data-en="A quick look at the reports you've submitted."
+                               data-bn="আপনার জমা দেওয়া অভিযোগগুলোর সংক্ষিপ্ত বিবরণ।">
+                                A quick look at the reports you've submitted.
+                            </p>
+                        </div>
+
+                        <button class="subtle-link" data-section="my-reports"
+                                data-en="View all reports →" data-bn="সব অভিযোগ দেখুন →">
+                            View all reports →
+                        </button>
+
+                    </div>
+
+                    <div class="stats-grid">
+
+                        <article class="stat-card">
+
+                            <div class="stat-top">
+                                <span data-en="Total reports" data-bn="মোট অভিযোগ">Total reports</span>
+                                <span class="stat-icon purple">▤</span>
+                            </div>
+
+                            <strong id="totalStat">0</strong>
+
+                            <small data-en="All time submissions" data-bn="এ পর্যন্ত জমা">
+                                All time submissions
+                            </small>
+
+                        </article>
+
+                        <article class="stat-card">
+
+                            <div class="stat-top">
+                                <span data-en="In progress" data-bn="চলমান">In progress</span>
+                                <span class="stat-icon orange">◷</span>
+                            </div>
+
+                            <strong id="progressStat">0</strong>
+
+                            <small data-en="Being handled by an institution"
+                                   data-bn="প্রতিষ্ঠান কাজ করছে">
+                                Being handled by an institution
+                            </small>
+
+                        </article>
+
+                        <article class="stat-card">
+
+                            <div class="stat-top">
+                                <span data-en="Resolved" data-bn="সমাধান হয়েছে">Resolved</span>
+                                <span class="stat-icon green">✓</span>
+                            </div>
+
+                            <strong id="resolvedStat">0</strong>
+
+                            <small data-en="Issues successfully addressed"
+                                   data-bn="সমাধান করা হয়েছে">
+                                Issues successfully addressed
+                            </small>
+
+                        </article>
+
+                    </div>
+
+                    <div class="lower-grid">
+
+                        <section class="panel recent-panel">
+
+                            <div class="panel-heading">
+
+                                <div>
+                                    <h3 data-en="Recent reports" data-bn="সাম্প্রতিক অভিযোগ">
+                                        Recent reports
+                                    </h3>
+
+                                    <p data-en="Stay updated on your community reports."
+                                       data-bn="আপনার অভিযোগের অগ্রগতি দেখুন।">
+                                        Stay updated on your community reports.
+                                    </p>
+                                </div>
+
+                                <button class="kebab" aria-label="More options">
+                                    •••
+                                </button>
+
+                            </div>
+
+                            <div class="report-list" id="recentReportList"></div>
+
+                            <button class="panel-footer-link" data-section="my-reports"
+                                    data-en="See all your reports →"
+                                    data-bn="সব অভিযোগ দেখুন →">
+                                See all your reports →
+                            </button>
+
+                        </section>
+
+                        <section class="panel steps-panel">
+
+                            <div class="panel-heading">
+
+                                <div>
+                                    <h3 data-en="How Civic Fix works"
+                                        data-bn="Civic Fix যেভাবে কাজ করে">
+                                        How Civic Fix works
+                                    </h3>
+
+                                    <p data-en="Your report can create real change."
+                                       data-bn="আপনার অভিযোগ বাস্তব পরিবর্তন আনতে পারে।">
+                                        Your report can create real change.
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <div class="step-list">
+
+                                <div class="step">
+                                    <span class="step-number">01</span>
+
+                                    <div>
+                                        <strong data-en="Tell us the issue" data-bn="সমস্যাটি জানান">
+                                            Tell us the issue
+                                        </strong>
+
+                                        <p data-en="Describe the problem and where it is happening."
+                                           data-bn="সমস্যা ও অবস্থান লিখে জানান।">
+                                            Describe the problem and where it is happening.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="step">
+                                    <span class="step-number">02</span>
+
+                                    <div>
+                                        <strong data-en="We review & route it" data-bn="যাচাই ও প্রেরণ">
+                                            We review & route it
+                                        </strong>
+
+                                        <p data-en="Our team reviews it and sends it to the right institution."
+                                           data-bn="আমাদের টিম যাচাই করে সঠিক প্রতিষ্ঠানে পাঠায়।">
+                                            Our team reviews it and sends it to the right institution.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="step">
+                                    <span class="step-number">03</span>
+
+                                    <div>
+                                        <strong data-en="Track the progress" data-bn="অগ্রগতি দেখুন">
+                                            Track the progress
+                                        </strong>
+
+                                        <p data-en="Follow updates until the issue is resolved."
+                                           data-bn="সমাধান না হওয়া পর্যন্ত আপডেট দেখুন।">
+                                            Follow updates until the issue is resolved.
+                                        </p>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="trust-note">
+                                <span>✦</span>
+
+                                <p data-en="Every report is reviewed. AI helps our team organize reports, while people make the final decisions."
+                                   data-bn="প্রতিটি অভিযোগ যাচাই করা হয়। AI সহায়তা করে, তবে চূড়ান্ত সিদ্ধান্ত নেন মানুষ।">
+                                    Every report is reviewed. AI helps our team organize reports, while people make the final decisions.
+                                </p>
+                            </div>
+
+                        </section>
+
+                    </div>
+
+                </section>
+
+                <!-- NEW REPORT -->
+                <section class="page-section" id="section-new-report">
+
+                    <div class="page-title-row">
+
+                        <div>
+                            <div class="eyebrow">
+                                <span class="eyebrow-line"></span>
+                                <span data-en="MAKE A DIFFERENCE" data-bn="পরিবর্তন আনুন">
+                                    MAKE A DIFFERENCE
+                                </span>
+                            </div>
+
+                            <h1 data-en="Submit a complaint" data-bn="অভিযোগ জমা দিন">
+                                Submit a complaint
+                            </h1>
+
+                            <p data-en="Tell us what's happening in your community. We'll help get it to the right people."
+                               data-bn="আপনার এলাকায় কী সমস্যা হচ্ছে জানান। আমরা সঠিক প্রতিষ্ঠানের কাছে পৌঁছে দেব।">
+                                Tell us what's happening in your community. We'll help get it to the right people.
+                            </p>
+                        </div>
+
+                        <span class="form-step">STEP 1 OF 1</span>
+
+                    </div>
+
+                    <div class="form-layout">
+
+                        <form class="panel complaint-form" id="complaintForm">
+
+                            <div class="form-section-title">
+                                <span class="form-section-icon">01</span>
+
+                                <div>
+                                    <h3 data-en="Issue details" data-bn="সমস্যার বিবরণ">Issue details</h3>
+                                    <p data-en="Give your complaint a clear title and description."
+                                       data-bn="সমস্যার শিরোনাম ও বিস্তারিত লিখুন।">
+                                        Give your complaint a clear title and description.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <label for="issueTitle" data-en="Complaint title" data-bn="অভিযোগের শিরোনাম">
+                                Complaint title <span>*</span>
+                            </label>
+
+                            <input id="issueTitle" name="title" type="text"
+                                   maxlength="220"
+                                   placeholder="e.g. Large pothole near the school gate"
+                                   required>
+
+                            <div class="field-hint" data-en="Keep it short and specific."
+                                 data-bn="সংক্ষিপ্ত ও নির্দিষ্ট রাখুন।">
+                                Keep it short and specific.
+                            </div>
+
+                            <label for="issueCategory" data-en="Issue category" data-bn="সমস্যার ধরন">
+                                Issue category <span>*</span>
+                            </label>
+
+                            <select id="issueCategory" name="category" required>
+                                <option value="" data-en="Select a category" data-bn="সমস্যার ধরন নির্বাচন করুন">
+                                    Select a category
+                                </option>
+                                <option>Road Damage</option>
+                                <option>Water Supply</option>
+                                <option>Electricity</option>
+                                <option>Drainage</option>
+                                <option>Garbage</option>
+                                <option>Street Light</option>
+                                <option>Sewage</option>
+                                <option>Public Property</option>
+                                <option>Other</option>
+                            </select>
+
+                            <label for="issueDescription" data-en="Describe the problem"
+                                   data-bn="সমস্যার বিস্তারিত">
+                                Describe the problem <span>*</span>
+                            </label>
+
+                            <textarea id="issueDescription" name="description"
+                                      rows="6" maxlength="2000"
+                                      placeholder="Explain what happened, how long it has been happening, and how it affects people..."
+                                      required></textarea>
+
+                            <div class="textarea-meta">
+                                <span data-en="Please avoid sharing private or sensitive information."
+                                      data-bn="ব্যক্তিগত বা সংবেদনশীল তথ্য দেবেন না।">
+                                    Please avoid sharing private or sensitive information.
+                                </span>
+
+                                <span id="charCount">0 / 2000</span>
+                            </div>
+
+                            <div class="form-divider"></div>
+
+                            <div class="form-section-title">
+                                <span class="form-section-icon">02</span>
+
+                                <div>
+                                    <h3 data-en="Issue location" data-bn="সমস্যার অবস্থান">
+                                        Issue location
+                                    </h3>
+
+                                    <p data-en="Help the responsible institution find the exact area."
+                                       data-bn="দায়িত্বপ্রাপ্ত প্রতিষ্ঠানকে সঠিক স্থান খুঁজে পেতে সাহায্য করুন।">
+                                        Help the responsible institution find the exact area.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <label for="issueLocation" data-en="Address or area" data-bn="ঠিকানা বা এলাকার নাম">
+                                Address or area <span>*</span>
+                            </label>
+
+                            <input id="issueLocation" name="location" type="text"
+                                   maxlength="300"
+                                   placeholder="e.g. Mirpur 10, near the bus stand, Dhaka"
+                                   required>
+
+                            <div class="location-fields">
+
+                                <div>
+                                    <label for="latitude" data-en="Latitude (optional)"
+                                           data-bn="অক্ষাংশ (ঐচ্ছিক)">
+                                        Latitude (optional)
+                                    </label>
+
+                                    <input id="latitude" name="latitude" type="number"
+                                           step="any" placeholder="23.8103">
+                                </div>
+
+                                <div>
+                                    <label for="longitude" data-en="Longitude (optional)"
+                                           data-bn="দ্রাঘিমাংশ (ঐচ্ছিক)">
+                                        Longitude (optional)
+                                    </label>
+
+                                    <input id="longitude" name="longitude" type="number"
+                                           step="any" placeholder="90.4125">
+                                </div>
+
+                            </div>
+
+                            <button type="button" class="location-button" id="locationButton">
+                                ◎
+                                <span data-en="Use my current location"
+                                      data-bn="আমার বর্তমান অবস্থান ব্যবহার করুন">
+                                    Use my current location
+                                </span>
+                            </button>
+
+                            <p class="privacy-note">
+                                ⌑
+                                <span data-en="Your location is used only to help identify where the issue needs attention."
+                                      data-bn="সমস্যার স্থান শনাক্ত করতে আপনার অবস্থান ব্যবহার করা হবে।">
+                                    Your location is used only to help identify where the issue needs attention.
+                                </span>
+                            </p>
+
+                            <div class="form-actions">
+
+                                <button type="reset" class="cancel-button"
+                                        data-en="Clear form" data-bn="ফর্ম মুছুন">
+                                    Clear form
+                                </button>
+
+                                <button type="submit" class="submit-button">
+                                    <span data-en="Submit complaint" data-bn="অভিযোগ জমা দিন">
+                                        Submit complaint
+                                    </span>
+                                    <span>→</span>
+                                </button>
+
+                            </div>
+
+                            <p class="demo-note">
+                                Your complaint will be saved in the Civic Fix database and assigned a tracking ID.
+                            </p>
+
+                        </form>
+
+                        <aside class="form-aside">
+
+                            <div class="aside-card ai-card">
+
+                                <div class="ai-spark">✦</div>
+
+                                <span class="aside-kicker"
+                                      data-en="SMART ASSISTANCE" data-bn="স্মার্ট সহায়তা">
+                                    SMART ASSISTANCE
+                                </span>
+
+                                <h3 data-en="A clearer report helps us act faster."
+                                    data-bn="স্পষ্ট অভিযোগ দ্রুত ব্যবস্থা নিতে সাহায্য করে।">
+                                    A clearer report helps us act faster.
+                                </h3>
+
+                                <p data-en="Civic Fix is designed to use AI to help organize complaint descriptions and suggest the responsible institution. An admin reviews the suggestion before forwarding."
+                                   data-bn="Civic Fix-এর AI অভিযোগ সাজাতে ও দায়িত্বপ্রাপ্ত প্রতিষ্ঠান শনাক্ত করতে সহায়তা করবে। পাঠানোর আগে অ্যাডমিন যাচাই করবেন।">
+                                    Civic Fix is designed to use AI to help organize complaint descriptions and suggest the responsible institution. An admin reviews the suggestion before forwarding.
+                                </p>
+
+                                <div class="ai-points">
+                                    <span>✓ <span data-en="Category suggestion" data-bn="সমস্যার ধরন প্রস্তাব">Category suggestion</span></span>
+                                    <span>✓ <span data-en="Priority recommendation" data-bn="অগ্রাধিকারের পরামর্শ">Priority recommendation</span></span>
+                                    <span>✓ <span data-en="Institution routing support" data-bn="প্রতিষ্ঠান নির্ধারণে সহায়তা">Institution routing support</span></span>
+                                </div>
+
+                                <small data-en="AI suggestions are not final decisions."
+                                       data-bn="AI-এর পরামর্শ চূড়ান্ত সিদ্ধান্ত নয়।">
+                                    AI suggestions are not final decisions.
+                                </small>
+
+                            </div>
+
+                            <div class="aside-card tips-card">
+
+                                <h3 data-en="Tips for a helpful report"
+                                    data-bn="ভালো অভিযোগ লেখার টিপস">
+                                    Tips for a helpful report
+                                </h3>
+
+                                <ul>
+                                    <li data-en="Describe one issue at a time."
+                                        data-bn="একবারে একটি সমস্যা জানান।">
+                                        Describe one issue at a time.
+                                    </li>
+
+                                    <li data-en="Mention when the problem started."
+                                        data-bn="সমস্যাটি কখন শুরু হয়েছে জানান।">
+                                        Mention when the problem started.
+                                    </li>
+
+                                    <li data-en="Give a nearby landmark or road name."
+                                        data-bn="কাছের পরিচিত স্থান বা রাস্তার নাম দিন।">
+                                        Give a nearby landmark or road name.
+                                    </li>
+
+                                    <li data-en="Explain how it affects the community."
+                                        data-bn="এটি মানুষের কী সমস্যা করছে জানান।">
+                                        Explain how it affects the community.
+                                    </li>
+                                </ul>
+
+                            </div>
+
+                        </aside>
+
+                    </div>
+
+                </section>
+
+                <!-- MY REPORTS -->
+                <section class="page-section" id="section-my-reports">
+
+                    <div class="page-title-row">
+
+                        <div>
+                            <div class="eyebrow">
+                                <span class="eyebrow-line"></span>
+                                <span data-en="YOUR SUBMISSIONS" data-bn="আপনার জমা দেওয়া অভিযোগ">
+                                    YOUR SUBMISSIONS
+                                </span>
+                            </div>
+
+                            <h1 data-en="My reports" data-bn="আমার অভিযোগ">
+                                My reports
+                            </h1>
+
+                            <p data-en="Track every issue you've brought to our attention."
+                               data-bn="আপনার জানানো প্রতিটি সমস্যার অগ্রগতি দেখুন।">
+                                Track every issue you've brought to our attention.
+                            </p>
+                        </div>
+
+                        <button class="submit-button compact" data-section="new-report">
+                            ＋
+                            <span data-en="New report" data-bn="নতুন অভিযোগ">New report</span>
+                        </button>
+
+                    </div>
+
+                    <div class="panel reports-panel">
+
+                        <div class="reports-toolbar">
+
+                            <div class="search-box">
+                                ⌕
+                                <input id="reportSearch" type="search"
+                                       placeholder="Search by title or tracking ID">
+                            </div>
+
+                            <select id="reportStatusFilter">
+                                <option value="all">All statuses</option>
+                                <option value="Submitted">Submitted</option>
+                                <option value="Under review">Under review</option>
+                                <option value="Forwarded">Forwarded</option>
+                                <option value="In progress">In progress</option>
+                                <option value="Resolved">Resolved</option>
+                            </select>
+
+                        </div>
+
+                        <div id="allReportsList" class="all-reports-list"></div>
+
+                    </div>
+
+                </section>
+
+                <!-- NOTIFICATIONS -->
+                <section class="page-section" id="section-notifications">
+
+                    <div class="page-title-row">
+
+                        <div>
+                            <div class="eyebrow">
+                                <span class="eyebrow-line"></span>
+                                <span data-en="STAY IN THE LOOP" data-bn="আপডেটের সাথে থাকুন">
+                                    STAY IN THE LOOP
+                                </span>
+                            </div>
+
+                            <h1 data-en="Notifications" data-bn="নোটিফিকেশন">
+                                Notifications
+                            </h1>
+
+                            <p data-en="Updates about your reports will appear here."
+                               data-bn="আপনার অভিযোগের আপডেট এখানে দেখা যাবে।">
+                                Updates about your reports will appear here.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div class="panel notification-panel" id="notificationList">
+
+                        <div class="notification-empty">
+                            <span>♧</span>
+
+                            <h3 data-en="You're all caught up"
+                                data-bn="আপনি সব আপডেট দেখে ফেলেছেন">
+                                You're all caught up
+                            </h3>
+
+                            <p data-en="New updates about your reports will appear here."
+                               data-bn="আপনার অভিযোগের নতুন আপডেট এখানে দেখা যাবে।">
+                                New updates about your reports will appear here.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+            <!-- FOOTER -->
+            <footer class="footer">
+
+                <span>© 2026 Civic Fix</span>
+
+                <span data-en="Small actions. Better communities."
+                      data-bn="ছোট উদ্যোগ, সুন্দর সমাজ।">
+                    Small actions. Better communities.
+                </span>
+
+                <a href="#" id="footerHelp" data-en="Need help?" data-bn="সাহায্য দরকার?">
+                    Need help?
+                </a>
+
+            </footer>
+
+        </main>
+
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <!-- SUCCESS MODAL -->
+    <div class="modal-backdrop" id="successModal" aria-hidden="true">
+
+        <div class="success-modal">
+
+            <button class="modal-close" id="closeSuccess" aria-label="Close">
+                ×
+            </button>
+
+            <div class="success-check">✓</div>
+
+            <span class="aside-kicker"
+                  data-en="REPORT RECEIVED" data-bn="অভিযোগ গ্রহণ করা হয়েছে">
+                REPORT RECEIVED
+            </span>
+
+            <h2 data-en="Thank you for speaking up!"
+                data-bn="সমস্যাটি জানানোর জন্য ধন্যবাদ!">
+                Thank you for speaking up!
+            </h2>
+
+            <p data-en="Your complaint has been saved in the Civic Fix database. Keep your tracking ID to find it later."
+               data-bn="আপনার অভিযোগ Civic Fix ডেটাবেজে সংরক্ষিত হয়েছে। পরে খুঁজে পেতে ট্র্যাকিং আইডি রাখুন।">
+                Your complaint has been saved in the Civic Fix database. Keep your tracking ID to find it later.
+            </p>
+
+            <div class="tracking-box">
+
+                <small data-en="YOUR TRACKING ID" data-bn="আপনার ট্র্যাকিং আইডি">
+                    YOUR TRACKING ID
+                </small>
+
+                <strong id="successTrackingId">CF-000000</strong>
+
+            </div>
+
+            <button class="submit-button modal-done" id="doneSuccess"
+                    data-en="View my reports →" data-bn="আমার অভিযোগ দেখুন →">
+                View my reports →
+            </button>
+
+        </div>
+
+    </div>
+
+    <script src="js/citizen.js"></script>
+
+</body>
+</html>

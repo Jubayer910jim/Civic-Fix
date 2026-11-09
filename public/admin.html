@@ -1,0 +1,618 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Civic Fix | Admin Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+    <div class="admin-layout">
+
+        <!-- SIDEBAR -->
+
+        <aside class="sidebar" id="sidebar">
+
+            <a href="/" class="brand">
+                <span class="brand-icon">C</span>
+                <span>Civic <strong>Fix</strong></span>
+            </a>
+
+            <div class="admin-profile">
+                <div class="profile-avatar">A</div>
+
+                <div>
+                    <strong>System Admin</strong>
+                    <small>Administrator</small>
+                </div>
+            </div>
+
+            <div class="sidebar-label">MAIN MENU</div>
+
+            <nav class="sidebar-nav">
+
+                <a href="#dashboard" class="nav-link active">
+                    <span>▦</span> Dashboard
+                </a>
+
+                <a href="#reports" class="nav-link">
+                    <span>▤</span> All Reports
+                </a>
+
+                <a href="#ai-review" class="nav-link">
+                    <span>✧</span> AI Review
+                </a>
+
+                <a href="#suspicious" class="nav-link">
+                    <span>⚑</span> Suspicious Reports
+                    <span class="nav-count" id="suspiciousCount">2</span>
+                </a>
+
+                <a href="#activity" class="nav-link">
+                    <span>◷</span> Activity History
+                </a>
+
+            </nav>
+
+            <div class="sidebar-label management-label">MANAGEMENT</div>
+
+            <nav class="sidebar-nav">
+
+                <a href="#institutions" class="nav-link">
+                    <span>▣</span> Institutions
+                </a>
+
+            </nav>
+
+            <div class="sidebar-bottom">
+
+                <div class="sidebar-help">
+                    <span>ⓘ</span>
+
+                    <div>
+                        <strong>Admin Workspace</strong>
+                        <small>Manage community reports</small>
+                    </div>
+                </div>
+
+                <a href="/" class="back-home">
+                    ← Back to Homepage
+                </a>
+
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+
+        <main class="main-content">
+
+            <!-- TOPBAR -->
+
+            <header class="topbar">
+
+                <div class="topbar-left">
+
+                    <button class="menu-toggle" id="menuToggle">☰</button>
+
+                    <div>
+                        <h2>Admin Dashboard</h2>
+                        <p>Manage and review community reports</p>
+                    </div>
+
+                </div>
+
+                <div class="topbar-right">
+
+                    <div class="system-status">
+                        <span class="online-dot"></span>
+                        System Online
+                    </div>
+
+                    <div class="top-avatar">A</div>
+
+                </div>
+
+            </header>
+
+
+            <!-- DASHBOARD -->
+
+            <section class="page-section" id="dashboard">
+
+                <div class="welcome-area">
+
+                    <div>
+                        <h1>Welcome back, Admin 👋</h1>
+                        <p>Here is what's happening with Civic Fix today.</p>
+                    </div>
+
+                    <div class="date-display" id="currentDate"></div>
+
+                </div>
+
+
+                <!-- STATISTICS -->
+
+                <div class="stats-grid">
+
+                    <div class="stat-card">
+
+                        <div class="stat-top">
+                            <span>Total Reports</span>
+                            <span class="stat-icon blue">▤</span>
+                        </div>
+
+                        <h2 id="totalReports">6</h2>
+                        <small>All submitted reports</small>
+
+                    </div>
+
+
+                    <div class="stat-card">
+
+                        <div class="stat-top">
+                            <span>Pending Review</span>
+                            <span class="stat-icon orange">◷</span>
+                        </div>
+
+                        <h2 id="pendingReports">4</h2>
+                        <small>Waiting for admin review</small>
+
+                    </div>
+
+
+                    <div class="stat-card">
+
+                        <div class="stat-top">
+                            <span>Forwarded</span>
+                            <span class="stat-icon green">↗</span>
+                        </div>
+
+                        <h2 id="forwardedReports">1</h2>
+                        <small>Sent to institutions</small>
+
+                    </div>
+
+
+                    <div class="stat-card">
+
+                        <div class="stat-top">
+                            <span>Flagged Reports</span>
+                            <span class="stat-icon red">⚑</span>
+                        </div>
+
+                        <h2 id="flaggedReports">2</h2>
+                        <small>Require additional checking</small>
+
+                    </div>
+
+                </div>
+
+
+                <!-- MAIN DASHBOARD GRID -->
+
+                <div class="dashboard-grid">
+
+                    <!-- RECENT REPORTS -->
+
+                    <div class="panel recent-panel">
+
+                        <div class="panel-header">
+
+                            <div>
+                                <h3>Recent Reports</h3>
+                                <p>Latest citizen submissions</p>
+                            </div>
+
+                            <a href="#reports" class="text-link">View All →</a>
+
+                        </div>
+
+                        <div class="table-wrapper">
+
+                            <table>
+
+                                <thead>
+                                    <tr>
+                                        <th>Report ID</th>
+                                        <th>Issue</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody id="recentReportsBody"></tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- AI SUMMARY -->
+
+                    <div class="panel ai-summary-panel" id="ai-review">
+
+                        <div class="panel-header">
+
+                            <div>
+                                <h3>AI Review Summary</h3>
+                                <p>Automated report assessment</p>
+                            </div>
+
+                            <span class="ai-badge">✧ AI</span>
+
+                        </div>
+
+                        <div class="ai-summary-item">
+                            <span class="summary-dot orange"></span>
+
+                            <div>
+                                <strong id="aiPending">4 reports</strong>
+                                <small>Awaiting admin verification</small>
+                            </div>
+                        </div>
+
+                        <div class="ai-summary-item">
+                            <span class="summary-dot red"></span>
+
+                            <div>
+                                <strong id="aiFlagged">2 reports</strong>
+                                <small>Potentially suspicious or duplicate</small>
+                            </div>
+                        </div>
+
+                        <div class="ai-summary-item">
+                            <span class="summary-dot green"></span>
+
+                            <div>
+                                <strong>AI Assistance</strong>
+                                <small>Suggestions require admin confirmation</small>
+                            </div>
+                        </div>
+
+                        <a href="#reports" class="ai-review-link">
+                            Review Reports →
+                        </a>
+
+                    </div>
+
+                </div>
+
+
+                <!-- INSTITUTION OVERVIEW -->
+
+                <div class="panel institution-panel" id="institutions">
+
+                    <div class="panel-header">
+
+                        <div>
+                            <h3>Institution Directory</h3>
+                            <p>Institutions available for report routing</p>
+                        </div>
+
+                    </div>
+
+                    <div class="institution-grid">
+
+                        <div class="institution-item">
+                            <div class="institution-icon">🏙️</div>
+                            <div>
+                                <strong>City Corporation</strong>
+                                <small>Roads, drainage and waste management</small>
+                            </div>
+                        </div>
+
+                        <div class="institution-item">
+                            <div class="institution-icon">💧</div>
+                            <div>
+                                <strong>WASA</strong>
+                                <small>Water supply and sewerage</small>
+                            </div>
+                        </div>
+
+                        <div class="institution-item">
+                            <div class="institution-icon">⚡</div>
+                            <div>
+                                <strong>Palli Bidyut</strong>
+                                <small>Electricity supply and outages</small>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- ALL REPORTS -->
+
+            <section class="page-section reports-section" id="reports">
+
+                <div class="section-title">
+
+                    <div>
+                        <h1>Report Management</h1>
+                        <p>Review citizen reports and forward them to the responsible institution.</p>
+                    </div>
+
+                </div>
+
+
+                <div class="panel reports-panel">
+
+                    <div class="filter-area">
+
+                        <div class="search-box">
+                            <span>⌕</span>
+
+                            <input
+                                type="text"
+                                id="searchInput"
+                                placeholder="Search report ID or issue..."
+                            >
+                        </div>
+
+                        <select id="statusFilter">
+                            <option value="all">All Statuses</option>
+                            <option value="Pending Review">Pending Review</option>
+                            <option value="Forwarded">Forwarded</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+
+                        <select id="priorityFilter">
+                            <option value="all">All Priorities</option>
+                            <option value="High">High Priority</option>
+                            <option value="Medium">Medium Priority</option>
+                            <option value="Low">Low Priority</option>
+                        </select>
+
+                    </div>
+
+
+                    <div class="table-wrapper">
+
+                        <table class="reports-table">
+
+                            <thead>
+                                <tr>
+                                    <th>Report ID</th>
+                                    <th>Citizen</th>
+                                    <th>Issue</th>
+                                    <th>Category</th>
+                                    <th>AI Priority</th>
+                                    <th>AI Flag</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="reportsTableBody"></tbody>
+
+                        </table>
+
+                        <div class="empty-state" id="emptyState" hidden>
+                            No reports found matching your search.
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- SUSPICIOUS REPORTS -->
+
+            <section class="page-section suspicious-section" id="suspicious">
+
+                <div class="section-title">
+                    <div>
+                        <h1>Suspicious Reports</h1>
+                        <p>Reports that AI has flagged for additional human review.</p>
+                    </div>
+                </div>
+
+                <div class="panel">
+
+                    <div class="warning-banner">
+                        <span>⚠</span>
+
+                        <div>
+                            <strong>AI flags are suggestions, not final decisions.</strong>
+                            <p>Always inspect the report before rejecting or marking it as duplicate.</p>
+                        </div>
+                    </div>
+
+                    <div id="suspiciousList" class="suspicious-list"></div>
+
+                </div>
+
+            </section>
+
+
+            <!-- ACTIVITY HISTORY -->
+
+            <section class="page-section activity-section" id="activity">
+
+                <div class="section-title">
+                    <div>
+                        <h1>Activity History</h1>
+                        <p>Recent actions performed in the admin workspace.</p>
+                    </div>
+                </div>
+
+                <div class="panel">
+
+                    <div id="activityList" class="activity-list"></div>
+
+                </div>
+
+            </section>
+
+
+            <!-- FOOTER -->
+
+            <footer class="admin-footer">
+                Civic Fix Admin Workspace · Frontend Demonstration
+            </footer>
+
+        </main>
+
+    </div>
+
+
+    <!-- REPORT DETAILS MODAL -->
+
+    <div class="modal-overlay" id="reportModal">
+
+        <div class="modal">
+
+            <div class="modal-header">
+
+                <div>
+                    <span class="modal-label">REPORT DETAILS</span>
+                    <h2 id="modalTitle">Report Details</h2>
+                </div>
+
+                <button class="close-modal" id="closeModal">×</button>
+
+            </div>
+
+
+            <div class="modal-body">
+
+                <div class="report-info-grid">
+
+                    <div>
+                        <small>Report ID</small>
+                        <strong id="modalId"></strong>
+                    </div>
+
+                    <div>
+                        <small>Citizen</small>
+                        <strong id="modalCitizen"></strong>
+                    </div>
+
+                    <div>
+                        <small>Location</small>
+                        <strong id="modalLocation"></strong>
+                    </div>
+
+                    <div>
+                        <small>Submitted</small>
+                        <strong id="modalDate"></strong>
+                    </div>
+
+                </div>
+
+
+                <div class="modal-description">
+
+                    <h4>Citizen Description</h4>
+                    <p id="modalDescription"></p>
+
+                </div>
+
+
+                <div class="ai-analysis-box">
+
+                    <div class="ai-analysis-heading">
+                        <span>✧</span>
+                        <h3>AI Analysis</h3>
+                        <span class="ai-badge">AI Suggestion</span>
+                    </div>
+
+                    <div class="ai-data-grid">
+
+                        <div>
+                            <small>Suggested Category</small>
+                            <strong id="modalCategory"></strong>
+                        </div>
+
+                        <div>
+                            <small>Suggested Priority</small>
+                            <strong id="modalPriority"></strong>
+                        </div>
+
+                        <div>
+                            <small>AI Confidence</small>
+                            <strong id="modalConfidence"></strong>
+                        </div>
+
+                        <div>
+                            <small>AI Flag</small>
+                            <strong id="modalFlag"></strong>
+                        </div>
+
+                    </div>
+
+                    <p class="ai-explanation" id="modalAIExplanation"></p>
+
+                </div>
+
+
+                <div class="routing-area">
+
+                    <h3>Admin Decision</h3>
+
+                    <label for="institutionSelect">Select Responsible Institution</label>
+
+                    <select id="institutionSelect">
+
+                        <option value="">Choose an institution</option>
+
+                        <option value="City Corporation">City Corporation</option>
+
+                        <option value="WASA">WASA</option>
+
+                        <option value="Palli Bidyut">Palli Bidyut</option>
+
+                    </select>
+
+                    <p class="routing-help">
+                        Verify the AI suggestion and select the correct institution before forwarding.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button class="action-btn reject-btn" id="rejectBtn">
+                    Reject Report
+                </button>
+
+                <button class="action-btn forward-btn" id="forwardBtn">
+                    Forward to Institution →
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script src="js/admin.js"></script>
+
+</body>
+</html>

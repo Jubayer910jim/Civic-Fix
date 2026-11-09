@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Login | Civic Fix</title>
+
+
+    <!-- Google Fonts -->
+
+    <link rel="preconnect"
+          href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossorigin>
+
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+
+    <!-- Login CSS -->
+
+    <link
+        rel="stylesheet"
+        href="css/login.css"
+    >
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================
+         LOGIN PAGE
+    ========================== -->
+
+    <main class="login-page">
+
+
+        <!-- =========================
+             LEFT SIDE
+        ========================== -->
+
+        <section class="login-info">
+
+
+            <!-- Logo -->
+
+            <a
+                href="/"
+                class="logo"
+            >
+
+                <span class="logo-icon">
+                    C
+                </span>
+
+                <span>
+                    Civic
+                    <span class="logo-highlight">
+                        Fix
+                    </span>
+                </span>
+
+            </a>
+
+
+            <!-- Content -->
+
+            <div class="info-content">
+
+
+                <span
+                    class="welcome-tag"
+                    id="portalTag"
+                >
+                    CIVIC FIX PORTAL
+                </span>
+
+
+                <h1 id="portalTitle">
+
+                    Welcome Back
+
+                </h1>
+
+
+                <p id="portalDescription">
+
+                    Sign in to access your Civic Fix dashboard
+                    and continue making your community better.
+
+                </p>
+
+
+                <!-- Features -->
+
+                <div class="feature-list">
+
+
+                    <div class="feature-item">
+
+                        <span class="feature-icon">
+                            ✓
+                        </span>
+
+                        <span>
+                            Secure access to your account
+                        </span>
+
+                    </div>
+
+
+                    <div class="feature-item">
+
+                        <span class="feature-icon">
+                            ✓
+                        </span>
+
+                        <span>
+                            Track and manage community issues
+                        </span>
+
+                    </div>
+
+
+                    <div class="feature-item">
+
+                        <span class="feature-icon">
+                            ✓
+                        </span>
+
+                        <span>
+                            Stay updated with Civic Fix
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+
+            <!-- Bottom text -->
+
+            <p class="info-footer">
+
+                Building better communities together.
+
+            </p>
+
+
+        </section>
+
+
+
+        <!-- =========================
+             RIGHT SIDE
+        ========================== -->
+
+        <section class="login-form-section">
+
+
+            <div class="login-container">
+
+
+                <!-- Back Button -->
+
+                <a
+                    href="/"
+                    class="back-link"
+                >
+
+                    ← Back to homepage
+
+                </a>
+
+
+                <!-- Login Header -->
+
+                <div class="login-header">
+
+
+                    <div
+                        class="portal-icon"
+                        id="loginPortalIcon"
+                    >
+                        👤
+                    </div>
+
+
+                    <h2 id="loginTitle">
+
+                        Citizen Login
+
+                    </h2>
+
+
+                    <p id="loginSubtitle">
+
+                        Sign in to access your Citizen Portal.
+
+                    </p>
+
+
+                </div>
+
+
+
+                <!-- =========================
+                     LOGIN FORM
+                ========================== -->
+
+                <form
+                    id="loginForm"
+                    novalidate
+                >
+
+
+                    <!-- Email -->
+
+                    <div class="form-group">
+
+                        <label for="email">
+
+                            Email Address
+
+                        </label>
+
+
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            placeholder="Enter your email address"
+                            autocomplete="email"
+                            required
+                        >
+
+                    </div>
+
+
+
+                    <!-- Password -->
+
+                    <div class="form-group">
+
+
+                        <label for="password">
+
+                            Password
+
+                        </label>
+
+
+                        <div class="password-wrapper">
+
+
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                placeholder="Enter your password"
+                                autocomplete="current-password"
+                                required
+                            >
+
+
+                            <button
+                                type="button"
+                                id="togglePassword"
+                                class="toggle-password"
+                                aria-label="Show password"
+                            >
+
+                                👁
+
+                            </button>
+
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <!-- Error / Success Message -->
+
+                    <div
+                        id="loginMessage"
+                        class="login-message"
+                        role="alert"
+                    >
+                    </div>
+
+
+
+                    <!-- Login Button -->
+
+                    <button
+                        type="submit"
+                        id="loginButton"
+                        class="login-button"
+                    >
+
+                        <span id="loginButtonText">
+
+                            Login
+
+                        </span>
+
+                    </button>
+
+
+                </form>
+
+
+
+                <!-- Demo Information -->
+
+                <div class="login-note">
+
+                    <strong>
+                        Civic Fix Authentication
+                    </strong>
+
+                    <p>
+
+                        Use your registered email and password
+                        to access your assigned portal.
+
+                    </p>
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+
+    </main>
+
+
+
+    <!-- JavaScript -->
+
+    <script src="js/login.js"></script>
+
+
+</body>
+
+</html>
