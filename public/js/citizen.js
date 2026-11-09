@@ -262,25 +262,32 @@ async function apiRequest(url, options = {}) {
 function updateGreeting() {
     const greetingElement = $("greetingText");
     const nameElement = $("citizenGreetingName");
-
     if (!greetingElement || !nameElement) return;
 
     const hour = new Date().getHours();
-    let englishGreeting = "Good evening,";
-    let banglaGreeting = "শুভ সন্ধ্যা,";
+    let englishGreeting;
+    let banglaGreeting;
 
-    if (hour < 12) {
+    if (hour >= 5 && hour < 12) {
         englishGreeting = "Good morning,";
         banglaGreeting = "শুভ সকাল,";
-    } else if (hour < 17) {
+    } else if (hour >= 12 && hour < 17) {
         englishGreeting = "Good afternoon,";
         banglaGreeting = "শুভ অপরাহ্ন,";
+    } else if (hour >= 17 && hour < 22) {
+        englishGreeting = "Good evening,";
+        banglaGreeting = "শুভ সন্ধ্যা,";
+    } else {
+        englishGreeting = "Good night,";
+        banglaGreeting = "শুভ রাত্রি,";
     }
 
     greetingElement.textContent = getCurrentText(englishGreeting, banglaGreeting);
     nameElement.textContent = citizenProfile.full_name || "Citizen";
 }
 
+updateGreeting();
+window.setInterval(updateGreeting, 60 * 1000);
 function updateProfileInterface() {
     const fullName = citizenProfile.full_name || "Citizen";
     const initials = getInitials(fullName);

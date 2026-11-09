@@ -51,6 +51,29 @@ input {
     box-shadow: var(--shadow);
 }
 
+.login-language-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 0 14px;
+}
+
+.login-language-button {
+    padding: 8px 13px;
+    border: 1px solid #cfe4d6;
+    border-radius: 9px;
+    background: #fff;
+    color: var(--green-900);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.login-language-button:hover,
+.login-language-button:focus-visible {
+    background: var(--green-50);
+    outline: 2px solid rgba(8, 123, 80, .2);
+    outline-offset: 2px;
+}
+
 .login-info {
     position: relative;
     display: flex;
