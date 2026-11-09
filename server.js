@@ -31,6 +31,11 @@ const db = require("./config/db");
 
 const app = express();
 
+// Shared in-process cache and request pacing for the public geocoder.
+const geocodeResultCache = new Map();
+let geocodeRequestQueue = Promise.resolve();
+let lastGeocodeRequestAt = 0;
+
 
 // ==========================================
 // 3. MIDDLEWARE
@@ -87,6 +92,8 @@ const reportsUploadDirectory =
         "reports"
     );
 
+const profilesUploadDirectory = path.join(uploadsDirectory, "profiles");
+
 
 // Create uploads/reports folder automatically
 
@@ -103,6 +110,10 @@ if (
         }
     );
 
+}
+
+if (!fs.existsSync(profilesUploadDirectory)) {
+    fs.mkdirSync(profilesUploadDirectory, { recursive: true });
 }
 
 
@@ -210,6 +221,20 @@ function imageFileFilter(
     }
 
 }
+
+const profileStorage = multer.diskStorage({
+    destination: (_req, _file, callback) => callback(null, profilesUploadDirectory),
+    filename: (_req, file, callback) => {
+        const extension = path.extname(file.originalname).toLowerCase();
+        callback(null, `profile-${Date.now()}-${crypto.randomBytes(8).toString("hex")}${extension}`);
+    }
+});
+
+const profileUpload = multer({
+    storage: profileStorage,
+    fileFilter: imageFileFilter,
+    limits: { fileSize: 2 * 1024 * 1024, files: 1 }
+});
 
 
 // ------------------------------------------
@@ -1152,7 +1177,7 @@ app.get(
                     ai_category.category_id
 
                 ORDER BY
-                    r.created_at DESC
+                    created_at DESC
 
             `;
 
@@ -1402,7 +1427,15 @@ app.get(
 
                         full_name,
 
-                        email
+                        email,
+
+                        phone,
+
+                        city,
+
+                        profile_image,
+
+                        auth_provider
 
                     FROM users
 
@@ -1438,6 +1471,8 @@ app.get(
 
                 success: true,
 
+                requestLocationPermission: true,
+
                 profile:
                     users[0]
 
@@ -1471,6 +1506,153 @@ app.get(
     }
 );
 
+app.put(
+    "/api/citizen/profile",
+    requireRole("citizen"),
+    profileUpload.single("profileImage"),
+    async (req, res) => {
+        const userId = getLoggedInUserId(req);
+        const newImagePath = req.file ? `/uploads/profiles/${req.file.filename}` : null;
+
+        try {
+            const fullName = typeof req.body.fullName === "string" ? req.body.fullName.trim() : "";
+            const rawEmail = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+            const rawPhone = typeof req.body.phone === "string" ? req.body.phone.trim() : "";
+            const city = typeof req.body.city === "string" ? req.body.city.trim() : "";
+            const currentPassword = typeof req.body.currentPassword === "string" ? req.body.currentPassword : "";
+            const newPassword = typeof req.body.newPassword === "string" ? req.body.newPassword : "";
+
+            if (fullName.length < 2 || fullName.length > 100) {
+                if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                return res.status(400).json({ success: false, message: "Name must be between 2 and 100 characters." });
+            }
+            if (rawEmail && (rawEmail.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail))) {
+                if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                return res.status(400).json({ success: false, message: "Enter a valid email address." });
+            }
+            if (city.length > 120) {
+                if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                return res.status(400).json({ success: false, message: "City or area must be 120 characters or fewer." });
+            }
+
+            let phone = null;
+            if (rawPhone) {
+                const digits = rawPhone.replace(/\D/g, "");
+                const national = digits.startsWith("880") ? digits.slice(3) : (digits.startsWith("0") ? digits.slice(1) : digits);
+                if (!/^1[3-9]\d{8}$/.test(national)) {
+                    if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                    return res.status(400).json({ success: false, message: "Enter a valid Bangladesh mobile number." });
+                }
+                phone = `+880${national}`;
+            }
+            if (!rawEmail && !phone) {
+                if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                return res.status(400).json({ success: false, message: "Add an email address or phone number so you can sign in." });
+            }
+
+            if (newPassword && (newPassword.length < 8 || newPassword.length > 72)) {
+                if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                return res.status(400).json({ success: false, message: "New password must be 8 to 72 characters." });
+            }
+
+            const [currentRows] = await db.query(
+                "SELECT password_hash, auth_provider, profile_image, email, phone, email_verified, phone_verified FROM users WHERE user_id = ? LIMIT 1",
+                [userId]
+            );
+            if (!currentRows.length) {
+                if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                return res.status(404).json({ success: false, message: "Citizen account not found." });
+            }
+            const current = currentRows[0];
+
+            const contactDetailsChanged =
+                (rawEmail || null) !== (current.email || null) ||
+                phone !== (current.phone || null);
+            const emailChanged = (rawEmail || null) !== (current.email || null);
+            const phoneChanged = phone !== (current.phone || null);
+            if ((newPassword || contactDetailsChanged) && current.auth_provider !== "google") {
+                const passwordMatches = current.password_hash && await bcrypt.compare(currentPassword, current.password_hash);
+                if (!passwordMatches) {
+                    if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                    return res.status(400).json({ success: false, message: "Enter your current password to change your email, phone or password." });
+                }
+            }
+
+            if (rawEmail) {
+                const [duplicates] = await db.query(
+                    "SELECT user_id FROM users WHERE email = ? AND user_id <> ? LIMIT 1",
+                    [rawEmail, userId]
+                );
+                if (duplicates.length) {
+                    if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                    return res.status(409).json({ success: false, message: "That email is already linked to another account." });
+                }
+            }
+            if (phone) {
+                const [duplicates] = await db.query(
+                    "SELECT user_id FROM users WHERE phone = ? AND user_id <> ? LIMIT 1",
+                    [phone, userId]
+                );
+                if (duplicates.length) {
+                    if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                    return res.status(409).json({ success: false, message: "That phone number is already linked to another account." });
+                }
+            }
+
+            const passwordHash = newPassword
+                ? await bcrypt.hash(newPassword, 12)
+                : current.password_hash;
+            const profileImage = newImagePath || current.profile_image;
+
+            await db.query(
+                `UPDATE users
+                 SET email_verified = ?, phone_verified = ?, full_name = ?, email = ?, phone = ?, city = ?, profile_image = ?, password_hash = ?
+                 WHERE user_id = ?`,
+                [
+                    emailChanged ? 0 : current.email_verified,
+                    phoneChanged ? 0 : current.phone_verified,
+                    fullName,
+                    rawEmail || null,
+                    phone,
+                    city || null,
+                    profileImage,
+                    passwordHash,
+                    userId
+                ]
+            );
+
+            req.session.user.full_name = fullName;
+            req.session.user.email = rawEmail || null;
+            req.session.user.phone = phone;
+
+            const oldImage = current.profile_image;
+            if (newImagePath && oldImage && oldImage.startsWith("/uploads/profiles/")) {
+                const oldPath = path.resolve(uploadsDirectory, oldImage.slice("/uploads/".length));
+                if (oldPath.startsWith(profilesUploadDirectory + path.sep)) {
+                    await fs.promises.unlink(oldPath).catch(() => {});
+                }
+            }
+
+            return res.json({
+                success: true,
+                message: "Profile updated successfully.",
+                profile: {
+                    user_id: userId,
+                    full_name: fullName,
+                    email: rawEmail || null,
+                    phone,
+                    city: city || null,
+                    profile_image: profileImage
+                }
+            });
+        } catch (error) {
+            if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+            console.error("Citizen profile update error:", error.message);
+            return res.status(500).json({ success: false, message: "Unable to update your profile." });
+        }
+    }
+);
+
 
 // ==========================================
 // 19. GET LOGGED-IN CITIZEN REPORTS
@@ -1499,51 +1681,24 @@ app.get(
             const sql = `
 
                 SELECT
-
-                    r.report_id,
-
-                    r.tracking_code,
-
-                    r.title,
-
-                    r.description,
-
-                    r.location_address,
-
-                    r.latitude,
-
-                    r.longitude,
-
-                    r.priority,
-
-                    r.status,
-
-                    r.resolution_description,
-
-                    r.created_at,
-
-                    r.updated_at,
-
-                    c.category_name,
-
-                    i.institution_name
-
-                FROM reports r
-
-                LEFT JOIN issue_categories c
-
-                    ON r.category_id =
-                    c.category_id
-
-                LEFT JOIN institutions i
-
-                    ON r.assigned_institution_id =
-                    i.institution_id
-
-                WHERE r.citizen_id = ?
+                    report_id,
+                    title,
+                    description,
+                    category AS category_name,
+                    location AS location_address,
+                    image_path,
+                    CASE status
+                        WHEN 'pending' THEN 'submitted'
+                        WHEN 'in_progress' THEN 'in_progress'
+                        ELSE status
+                    END AS status,
+                    created_at,
+                    updated_at
+                FROM reports
+                WHERE user_id = ?
 
                 ORDER BY
-                    r.created_at DESC
+                    created_at DESC
 
             `;
 
@@ -1557,11 +1712,13 @@ app.get(
                 );
 
 
-            // Add images
-
-            await addImagesToReports(
-                reports
-            );
+            // This schema stores one optional image path on each report.
+            for (const report of reports) {
+                report.tracking_code = `CF-${report.report_id}`;
+                report.images = report.image_path
+                    ? [{ image_path: report.image_path, image_url: report.image_path }]
+                    : [];
+            }
 
 
             res.json({
@@ -1606,665 +1763,109 @@ app.get(
 
 
 // ==========================================
-// 20. SUBMIT A NEW CITIZEN COMPLAINT
-// ==========================================
-
-// Images are OPTIONAL.
-//
-// 0 images = allowed
-// 1 image  = allowed
-// 2 images = allowed
-// 3 images = allowed
-//
-// More than 3 = rejected.
-//
-// GPS coordinates are also optional.
-// Citizens can submit complaints using
-// their written issue location.
-
-
+// 20. SUBMIT A NEW CITIZEN REPORT
+// Matches the supplied civic_fix.sql report schema.
 app.post(
     "/api/citizen/reports",
-
-    requireRole(
-        "citizen"
-    ),
-
-    upload.array(
-        "images",
-        3
-    ),
-
-    async (
-        req,
-        res
-    ) => {
-
-        const uploadedFiles =
-            req.files || [];
-
-
+    requireRole("citizen"),
+    upload.array("images", 3),
+    async (req, res) => {
+        const uploadedFiles = req.files || [];
+        let connection;
+        const reject = (status, message) => {
+            deleteUploadedFiles(uploadedFiles);
+            return res.status(status).json({ success: false, message });
+        };
         try {
-
-            const citizenId =
-                getLoggedInUserId(
-                    req
-                );
-
-
-            const {
-
-                title,
-
-                category,
-
-                description,
-
-                location,
-
-                latitude,
-
-                longitude
-
-            } = req.body;
-
-
-            // --------------------------------------
-            // VALIDATE TITLE
-            // --------------------------------------
-
-            if (
-
-                typeof title !== "string" ||
-
-                title.trim().length === 0 ||
-
-                title.trim().length > 220
-
-            ) {
-
-                deleteUploadedFiles(
-                    uploadedFiles
-                );
-
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        message:
-                            "Please enter a title of up to 220 characters."
-
-                    });
-
-            }
-
-
-            // --------------------------------------
-            // VALIDATE CATEGORY
-            // --------------------------------------
-
-            if (
-
-                typeof category !== "string" ||
-
-                category.trim().length === 0
-
-            ) {
-
-                deleteUploadedFiles(
-                    uploadedFiles
-                );
-
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        message:
-                            "Please select an issue category."
-
-                    });
-
-            }
-
-
-            // --------------------------------------
-            // VALIDATE DESCRIPTION
-            // --------------------------------------
-
-            if (
-
-                typeof description !== "string" ||
-
-                description.trim().length < 20
-
-            ) {
-
-                deleteUploadedFiles(
-                    uploadedFiles
-                );
-
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        message:
-                            "Description must contain at least 20 characters."
-
-                    });
-
-            }
-
-
-            // --------------------------------------
-            // VALIDATE LOCATION ADDRESS
-            // --------------------------------------
-
-            if (
-
-                typeof location !== "string" ||
-
-                location.trim().length === 0 ||
-
-                location.trim().length > 300
-
-            ) {
-
-                deleteUploadedFiles(
-                    uploadedFiles
-                );
-
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        message:
-                            "Please enter a valid issue location."
-
-                    });
-
-            }
-
-
-            // --------------------------------------
-            // VALIDATE OPTIONAL GPS COORDINATES
-            // --------------------------------------
+            const citizenId = getLoggedInUserId(req);
+            const { title, category, description, location, latitude, longitude } = req.body;
+            if (typeof title !== "string" || !title.trim() || title.trim().length > 200)
+                return reject(400, "Enter a title of up to 200 characters.");
+            if (typeof category !== "string" || !category.trim() || category.trim().length > 100)
+                return reject(400, "Select a valid issue category.");
+            if (typeof description !== "string" || description.trim().length < 20 || description.trim().length > 2000)
+                return reject(400, "The description must be between 20 and 2000 characters.");
+            if (typeof location !== "string" || !location.trim() || location.trim().length > 255)
+                return reject(400, "Enter an issue location of up to 255 characters.");
+
+            const hasLatitude = latitude != null && String(latitude).trim() !== "";
+            const hasLongitude = longitude != null && String(longitude).trim() !== "";
+            if (hasLatitude !== hasLongitude) return reject(400, "Provide both latitude and longitude.");
 
             let validLatitude = null;
-
             let validLongitude = null;
-
-
-            const hasLatitude =
-                latitude !== undefined &&
-                latitude !== null &&
-                String(latitude).trim() !== "";
-
-
-            const hasLongitude =
-                longitude !== undefined &&
-                longitude !== null &&
-                String(longitude).trim() !== "";
-
-
-            // If one coordinate is provided,
-            // both coordinates must be provided.
-
-            if (
-                hasLatitude !== hasLongitude
-            ) {
-
-                deleteUploadedFiles(
-                    uploadedFiles
-                );
-
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        message:
-                            "Please provide both latitude and longitude."
-
-                    });
-
+            if (hasLatitude) {
+                validLatitude = Number(latitude);
+                validLongitude = Number(longitude);
+                if (!Number.isFinite(validLatitude) || validLatitude < -90 || validLatitude > 90 ||
+                    !Number.isFinite(validLongitude) || validLongitude < -180 || validLongitude > 180)
+                    return reject(400, "The location coordinates are invalid.");
             }
 
-
-            // GPS coordinates are optional.
-
-            if (
-                hasLatitude &&
-                hasLongitude
-            ) {
-
-                validLatitude =
-                    Number(latitude);
-
-                validLongitude =
-                    Number(longitude);
-
-
-                if (
-
-                    !Number.isFinite(
-                        validLatitude
-                    ) ||
-
-                    validLatitude < -90 ||
-
-                    validLatitude > 90
-
-                ) {
-
-                    deleteUploadedFiles(
-                        uploadedFiles
-                    );
-
-
-                    return res
-                        .status(400)
-                        .json({
-
-                            success: false,
-
-                            message:
-                                "Invalid latitude value."
-
-                        });
-
-                }
-
-
-                if (
-
-                    !Number.isFinite(
-                        validLongitude
-                    ) ||
-
-                    validLongitude < -180 ||
-
-                    validLongitude > 180
-
-                ) {
-
-                    deleteUploadedFiles(
-                        uploadedFiles
-                    );
-
-
-                    return res
-                        .status(400)
-                        .json({
-
-                            success: false,
-
-                            message:
-                                "Invalid longitude value."
-
-                        });
-
-                }
-
-            }
-
-
-            // --------------------------------------
-            // FIND CATEGORY ID
-            // --------------------------------------
-
-            const [categories] =
-                await db.query(
-                    `
-                    SELECT
-                        category_id
-
-                    FROM issue_categories
-
-                    WHERE
-                        LOWER(category_name) =
-                        LOWER(?)
-
-                    AND status = 'active'
-
-                    LIMIT 1
-                    `,
-                    [
-                        category.trim()
-                    ]
-                );
-
-
-            if (
-                categories.length === 0
-            ) {
-
-                deleteUploadedFiles(
-                    uploadedFiles
-                );
-
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        message:
-                            "The selected issue category was not found."
-
-                    });
-
-            }
-
-
-            // --------------------------------------
-            // GENERATE TRACKING CODE
-            // --------------------------------------
-
-            const trackingCode =
-
-                "CF-" +
-
-                Date.now() +
-
-                "-" +
-
-                crypto
-                    .randomBytes(3)
-                    .toString("hex")
-                    .toUpperCase();
-
-
-            // --------------------------------------
-            // INSERT REPORT
-            // --------------------------------------
-
-            const insertSql = `
-
-                INSERT INTO reports (
-
-                    tracking_code,
-
-                    citizen_id,
-
-                    category_id,
-
-                    title,
-
-                    description,
-
-                    location_address,
-
-                    latitude,
-
-                    longitude,
-
-                    priority,
-
-                    status
-
-                )
-
-                VALUES (
-
-                    ?, ?, ?, ?, ?, ?, ?, ?,
-
-                    'medium',
-
-                    'submitted'
-
-                )
-
-            `;
-
-
-            const [result] =
-                await db.query(
-                    insertSql,
-                    [
-
-                        trackingCode,
-
-                        citizenId,
-
-                        categories[0]
-                            .category_id,
-
-                        title.trim(),
-
-                        description.trim(),
-
-                        location.trim(),
-
-                        validLatitude,
-
-                        validLongitude
-
-                    ]
-                );
-
-
-            const reportId =
-                result.insertId;
-
-
-            // --------------------------------------
-            // SAVE OPTIONAL IMAGES
-            // --------------------------------------
-
-            if (
-                uploadedFiles.length > 0
-            ) {
-
-                for (
-                    let index = 0;
-
-                    index <
-                    uploadedFiles.length;
-
-                    index++
-                ) {
-
-                    const file =
-                        uploadedFiles[index];
-
-
-                    const imagePath =
-                        "/uploads/reports/" +
-                        file.filename;
-
-
-                    await db.query(
-                        `
-                        INSERT INTO report_images (
-
-                            report_id,
-
-                            image_path,
-
-                            original_filename,
-
-                            stored_filename,
-
-                            mime_type,
-
-                            file_size,
-
-                            image_order,
-
-                            ai_relevance_status
-
-                        )
-
-                        VALUES (
-
-                            ?, ?, ?, ?, ?, ?, ?,
-
-                            'pending'
-
-                        )
-                        `,
-                        [
-
-                            reportId,
-
-                            imagePath,
-
-                            file.originalname,
-
-                            file.filename,
-
-                            file.mimetype,
-
-                            file.size,
-
-                            index + 1
-
-                        ]
-                    );
-
-                }
-
-            }
-
-
-            // --------------------------------------
-            // RETRIEVE NEW REPORT
-            // --------------------------------------
-
-            const [newReports] =
-                await db.query(
-                    `
-                    SELECT
-
-                        r.report_id,
-
-                        r.tracking_code,
-
-                        r.title,
-
-                        r.description,
-
-                        r.location_address,
-
-                        r.latitude,
-
-                        r.longitude,
-
-                        r.priority,
-
-                        r.status,
-
-                        r.created_at,
-
-                        c.category_name
-
-                    FROM reports r
-
-                    LEFT JOIN issue_categories c
-
-                        ON r.category_id =
-                        c.category_id
-
-                    WHERE
-
-                        r.report_id = ?
-
-                    AND
-
-                        r.citizen_id = ?
-                    `,
-                    [
-
-                        reportId,
-
-                        citizenId
-
-                    ]
-                );
-
-
-            // Add images to response
-
-            await addImagesToReports(
-                newReports
+            const imagePath = uploadedFiles.length
+                ? "/uploads/reports/" + uploadedFiles[0].filename
+                : null;
+
+            connection = await db.getConnection();
+            await connection.beginTransaction();
+            const [result] = await connection.query(
+                `INSERT INTO reports
+                    (user_id, title, description, category, location, image_path, latitude, longitude, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+                [citizenId, title.trim(), description.trim(), category.trim(), location.trim(),
+                    imagePath, validLatitude, validLongitude]
             );
 
+            const reportId = result.insertId;
+            for (let index = 0; index < uploadedFiles.length; index++) {
+                const file = uploadedFiles[index];
+                await connection.query(
+                    `INSERT INTO report_images
+                        (report_id, image_path, original_filename, stored_filename, mime_type, file_size, image_order, ai_relevance_status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+                    [reportId, "/uploads/reports/" + file.filename, file.originalname,
+                        file.filename, file.mimetype, file.size, index + 1]
+                );
+            }
+            await connection.commit();
 
-            res
-                .status(201)
-                .json({
-
-                    success: true,
-
-                    message:
-                        uploadedFiles.length > 0
-
-                            ?
-
-                            "Your complaint and supporting images have been submitted successfully."
-
-                            :
-
-                            "Your complaint has been submitted successfully.",
-
-                    report:
-                        newReports[0]
-
-                });
-
+            const images = uploadedFiles.map(file => ({
+                image_path: "/uploads/reports/" + file.filename,
+                image_url: "/uploads/reports/" + file.filename,
+                original_filename: file.originalname
+            }));
+            return res.status(201).json({
+                success: true,
+                message: "Your report has been submitted successfully.",
+                report: {
+                    report_id: reportId,
+                    tracking_code: "CF-" + reportId,
+                    title: title.trim(),
+                    description: description.trim(),
+                    category_name: category.trim(),
+                    location_address: location.trim(),
+                    latitude: validLatitude,
+                    longitude: validLongitude,
+                    status: "pending",
+                    created_at: new Date().toISOString(),
+                    images
+                }
+            });
+        } catch (error) {
+            if (connection) await connection.rollback().catch(() => {});
+            deleteUploadedFiles(uploadedFiles);
+            console.error("Citizen report submission error:", error.message);
+            return res.status(500).json({
+                success: false,
+                message: "Unable to submit this report. Please try again."
+            });
+        } finally {
+            if (connection) connection.release();
         }
-
-        catch (
-        error
-        ) {
-
-            console.error(
-                "Complaint submission error:",
-                error.message
-            );
-
-
-            // Remove uploaded files
-            // if database processing fails
-
-            deleteUploadedFiles(
-                uploadedFiles
-            );
-
-
-            res
-                .status(500)
-                .json({
-
-                    success: false,
-
-                    message:
-                        "Unable to submit your complaint. Please try again."
-
-                });
-
-        }
-
     }
 );
 
 
-// ==========================================
 // 21. GET CITIZEN DASHBOARD STATISTICS
 // ==========================================
 
@@ -2301,15 +1902,9 @@ app.get(
 
                             WHEN status IN (
 
-                                'submitted',
+                                'pending',
 
-                                'under_review',
-
-                                'forwarded',
-
-                                'in_progress',
-
-                                'reopened'
+                                'in_progress'
 
                             )
 
@@ -2340,7 +1935,7 @@ app.get(
 
                 FROM reports
 
-                WHERE citizen_id = ?
+                WHERE user_id = ?
 
             `;
 
@@ -2429,7 +2024,278 @@ app.get(
 
 
 // ==========================================
-// 22. MULTER ERROR HANDLER
+// ==========================================
+// 21A. CITIZEN MAP ADDRESS SEARCH
+// Proxy and cache user-triggered Nominatim searches; keep requests paced per server.
+// GEOCODER_URL can point to another Nominatim-compatible provider.
+// ==========================================
+
+app.get(
+    "/api/citizen/geocode",
+    requireRole("citizen"),
+    async (req, res) => {
+        const query = typeof req.query.q === "string"
+            ? req.query.q.trim().replace(/\s+/g, " ")
+            : "";
+        if (query.length < 3 || query.length > 180) {
+            return res.status(400).json({ success: false, message: "Enter a location between 3 and 180 characters." });
+        }
+
+        const cacheKey = query.toLocaleLowerCase();
+        const maxCacheAge = 7 * 24 * 60 * 60 * 1000;
+        const cached = geocodeResultCache.get(cacheKey);
+        if (cached && Date.now() - cached.cachedAt < maxCacheAge) {
+            return res.json({ success: true, place: cached.place, cached: true });
+        }
+
+        let releaseQueue;
+        const previousRequest = geocodeRequestQueue;
+        geocodeRequestQueue = new Promise(resolve => { releaseQueue = resolve; });
+        await previousRequest;
+
+        try {
+            const queuedCache = geocodeResultCache.get(cacheKey);
+            if (queuedCache && Date.now() - queuedCache.cachedAt < maxCacheAge) {
+                return res.json({ success: true, place: queuedCache.place, cached: true });
+            }
+
+            const waitMs = Math.max(0, 1100 - (Date.now() - lastGeocodeRequestAt));
+            if (waitMs) await new Promise(resolve => setTimeout(resolve, waitMs));
+            lastGeocodeRequestAt = Date.now();
+
+            const geocoderUrl = new URL(process.env.GEOCODER_URL || "https://nominatim.openstreetmap.org/search");
+            geocoderUrl.searchParams.set("format", "jsonv2");
+            geocoderUrl.searchParams.set("limit", "1");
+            geocoderUrl.searchParams.set("q", query);
+            const response = await fetch(geocoderUrl, {
+                headers: {
+                    Accept: "application/json",
+                    "User-Agent": "CivicFix/1.0 (citizen service request map)",
+                    ...(process.env.PUBLIC_BASE_URL ? { Referer: process.env.PUBLIC_BASE_URL } : {})
+                },
+                signal: AbortSignal.timeout(10000)
+            });
+            if (!response.ok) {
+                console.error("Citizen map geocoder response:", response.status);
+                return res.status(502).json({ success: false, message: "Location search is temporarily unavailable." });
+            }
+
+            const results = await response.json();
+            const result = Array.isArray(results) ? results[0] : null;
+            const place = result && Number.isFinite(Number(result.lat)) && Number.isFinite(Number(result.lon))
+                ? {
+                    lat: Number(result.lat),
+                    lon: Number(result.lon),
+                    name: typeof result.name === "string" ? result.name.slice(0, 180) : "",
+                    display_name: typeof result.display_name === "string" ? result.display_name.slice(0, 300) : ""
+                }
+                : null;
+
+            if (geocodeResultCache.size >= 1000) {
+                geocodeResultCache.delete(geocodeResultCache.keys().next().value);
+            }
+            geocodeResultCache.set(cacheKey, { place, cachedAt: Date.now() });
+            return res.json({ success: true, place, cached: false });
+        } catch (error) {
+            console.error("Citizen map geocoder error:", error.message);
+            return res.status(502).json({ success: false, message: "Location search is temporarily unavailable." });
+        } finally {
+            releaseQueue();
+        }
+    }
+);
+
+// 22. LOCAL CITIZEN NEWSFEED
+// Uses browser-provided coordinates only for this request; there is no background tracking.
+// ==========================================
+
+app.get(
+    "/api/citizen/newsfeed",
+    requireRole("citizen"),
+    async (req, res) => {
+        const latitude = Number(req.query.lat);
+        const longitude = Number(req.query.lng);
+        const radiusKm = Number(req.query.radiusKm || 10);
+
+        if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
+            !Number.isFinite(longitude) || longitude < -180 || longitude > 180 ||
+            !Number.isFinite(radiusKm) || radiusKm < 1 || radiusKm > 50) {
+            return res.status(400).json({ success: false, message: "Provide valid coordinates and a radius between 1 and 50 km." });
+        }
+
+        try {
+            const [reports] = await db.query(`
+                SELECT
+                    r.report_id,
+                    r.title,
+                    r.description,
+                    r.category,
+                    r.location,
+                    r.image_path,
+                    r.latitude,
+                    r.longitude,
+                    r.status,
+                    r.created_at,
+                    r.updated_at,
+                    ROUND(6371 * ACOS(LEAST(1, GREATEST(-1,
+                        SIN(RADIANS(?)) * SIN(RADIANS(r.latitude)) +
+                        COS(RADIANS(?)) * COS(RADIANS(r.latitude)) *
+                        COS(RADIANS(r.longitude) - RADIANS(?))
+                    ))), 2) AS distance_km,
+                    (SELECT COUNT(*) FROM report_comments rc WHERE rc.report_id = r.report_id) AS comment_count
+                FROM reports r
+                INNER JOIN users u ON u.user_id = r.user_id
+                WHERE u.role = 'citizen'
+                    AND u.account_status = 'active'
+                    AND r.latitude IS NOT NULL
+                    AND r.longitude IS NOT NULL
+                HAVING distance_km <= ?
+                ORDER BY r.created_at DESC, r.report_id DESC
+            `, [latitude, latitude, longitude, radiusKm]);
+
+            await addImagesToReports(reports);
+            for (const report of reports) {
+                report.tracking_code = `CF-${report.report_id}`;
+                report.images = report.images || [];
+                if (!report.images.length && report.image_path) {
+                    report.images = [{ image_path: report.image_path, image_url: report.image_path }];
+                }
+                report.comment_count = Number(report.comment_count || 0);
+                report.distance_km = Number(report.distance_km || 0);
+            }
+
+            return res.json({ success: true, radiusKm, count: reports.length, reports });
+        } catch (error) {
+            console.error("Citizen newsfeed error:", error.message);
+            return res.status(500).json({ success: false, message: "Unable to load nearby reports." });
+        }
+    }
+);
+
+app.get(
+    "/api/citizen/reports/:reportId/comments",
+    requireRole("citizen"),
+    async (req, res) => {
+        const reportId = Number(req.params.reportId);
+        if (!Number.isSafeInteger(reportId) || reportId < 1) {
+            return res.status(400).json({ success: false, message: "Invalid report ID." });
+        }
+        try {
+            const [reports] = await db.query("SELECT report_id FROM reports WHERE report_id = ? LIMIT 1", [reportId]);
+            if (!reports.length) return res.status(404).json({ success: false, message: "Report not found." });
+            const [comments] = await db.query(`
+                SELECT c.comment_id, c.comment_text, c.created_at, u.full_name AS author
+                FROM report_comments c
+                INNER JOIN users u ON u.user_id = c.user_id
+                WHERE c.report_id = ?
+                ORDER BY c.created_at ASC, c.comment_id ASC
+            `, [reportId]);
+            return res.json({ success: true, comments });
+        } catch (error) {
+            console.error("Citizen report comments error:", error.message);
+            return res.status(500).json({ success: false, message: "Unable to load report comments." });
+        }
+    }
+);
+
+app.post(
+    "/api/citizen/reports/:reportId/comments",
+    requireRole("citizen"),
+    async (req, res) => {
+        const reportId = Number(req.params.reportId);
+        const comment = typeof req.body.comment === "string" ? req.body.comment.trim() : "";
+        if (!Number.isSafeInteger(reportId) || reportId < 1) {
+            return res.status(400).json({ success: false, message: "Invalid report ID." });
+        }
+        if (!comment || comment.length > 1000) {
+            return res.status(400).json({ success: false, message: "Write a comment of up to 1000 characters." });
+        }
+        try {
+            const [reports] = await db.query("SELECT report_id FROM reports WHERE report_id = ? LIMIT 1", [reportId]);
+            if (!reports.length) return res.status(404).json({ success: false, message: "Report not found." });
+            const [result] = await db.query(
+                "INSERT INTO report_comments (report_id, user_id, comment_text) VALUES (?, ?, ?)",
+                [reportId, getLoggedInUserId(req), comment]
+            );
+            return res.status(201).json({
+                success: true,
+                comment: {
+                    comment_id: result.insertId,
+                    comment_text: comment,
+                    author: req.session.user.full_name || "Citizen",
+                    created_at: new Date().toISOString()
+                }
+            });
+        } catch (error) {
+            console.error("Citizen comment submission error:", error.message);
+            return res.status(500).json({ success: false, message: "Unable to post this comment." });
+        }
+    }
+);
+
+
+// ==========================================
+// 23. CITIZEN LEADERBOARD
+// Give 10 points for each report that has been accepted for action or resolved.
+// Pending reports have not been validated yet; rejected reports never score.
+// ==========================================
+
+app.get(
+    "/api/citizen/leaderboard",
+    requireRole("citizen"),
+    async (req, res) => {
+        try {
+            const citizenId = getLoggedInUserId(req);
+            const [rows] = await db.query(`
+                SELECT
+                    u.user_id,
+                    u.full_name,
+                    COUNT(r.report_id) AS legitimate_reports
+                FROM users u
+                LEFT JOIN reports r
+                    ON r.user_id = u.user_id
+                    AND r.status IN ('in_progress', 'resolved')
+                WHERE u.role = 'citizen'
+                    AND u.account_status = 'active'
+                GROUP BY u.user_id, u.full_name
+                ORDER BY legitimate_reports DESC, u.full_name ASC, u.user_id ASC
+            `);
+
+            const leaderboard = rows.map((row, index) => {
+                const legitimateReports = Number(row.legitimate_reports || 0);
+                return {
+                    rank: index + 1,
+                    name: row.full_name || "Citizen",
+                    legitimateReports,
+                    points: legitimateReports * 10,
+                    isCurrentUser: Number(row.user_id) === Number(citizenId)
+                };
+            });
+            const current = leaderboard.find(entry => entry.isCurrentUser);
+
+            return res.json({
+                success: true,
+                pointsPerLegitimateReport: 10,
+                currentUser: {
+                    rank: current ? current.rank : null,
+                    legitimateReports: current ? current.legitimateReports : 0,
+                    points: current ? current.points : 0
+                },
+                leaderboard
+            });
+        } catch (error) {
+            console.error("Citizen leaderboard error:", error.message);
+            return res.status(500).json({
+                success: false,
+                message: "Unable to load the citizen leaderboard."
+            });
+        }
+    }
+);
+
+
+// ==========================================
+// 24. MULTER ERROR HANDLER
 // ==========================================
 
 app.use(
@@ -2459,7 +2325,9 @@ app.use(
                         success: false,
 
                         message:
-                            "You can upload a maximum of 3 images."
+                            req.path === "/api/citizen/profile"
+                                ? "Upload one profile picture at a time."
+                                : "You can upload a maximum of 3 images."
 
                     });
 
@@ -2480,7 +2348,9 @@ app.use(
                         success: false,
 
                         message:
-                            "Each image must be 5 MB or smaller."
+                            req.path === "/api/citizen/profile"
+                                ? "Profile picture must be 2 MB or smaller."
+                                : "Each image must be 5 MB or smaller."
 
                     });
 

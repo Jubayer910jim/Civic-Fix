@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Civic Fix citizen portal - report and track community issues.">
+    <meta name="theme-color" content="#f3f8f5">
 
     <title>Citizen Portal | Civic Fix</title>
 
@@ -14,10 +15,14 @@
 
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
     <link rel="stylesheet" href="css/citizen.css">
 </head>
 
-<body>
+<body class="citizen-page">
+
+    <a class="skip-link" href="#mainContent" data-en="Skip to content" data-bn="মূল কনটেন্টে যান">Skip to content</a>
 
     <div class="app-shell">
 
@@ -41,6 +46,11 @@
 
             <nav class="side-nav" aria-label="Main navigation">
 
+                <button class="nav-item" data-section="newsfeed">
+                    <span class="nav-icon" aria-hidden="true">◉</span>
+                    <span data-en="Newsfeed" data-bn="নিউজফিড">Newsfeed</span>
+                </button>
+
                 <button class="nav-item active" data-section="overview">
                     <span class="nav-icon">⌂</span>
                     <span data-en="Overview" data-bn="ওভারভিউ">Overview</span>
@@ -63,27 +73,14 @@
                     <span class="notification-dot"></span>
                 </button>
 
-            </nav>
-
-            <div class="sidebar-help">
-
-                <div class="help-icon">✦</div>
-
-                <strong data-en="Your voice matters" data-bn="আপনার মতামত গুরুত্বপূর্ণ">
-                    Your voice matters
-                </strong>
-
-                <p data-en="Together, we can make our communities better."
-                   data-bn="একসাথে আমরা আমাদের এলাকাকে আরও সুন্দর করতে পারি।">
-                    Together, we can make our communities better.
-                </p>
-
-                <button id="helpButton" class="text-button"
-                        data-en="How it works →" data-bn="যেভাবে কাজ করে →">
-                    How it works →
+                <button class="nav-item" data-section="leaderboard">
+                    <span class="nav-icon" aria-hidden="true">★</span>
+                    <span data-en="Leaderboard" data-bn="লিডারবোর্ড">Leaderboard</span>
                 </button>
 
-            </div>
+            </nav>
+
+
 
             <div class="sidebar-bottom">
 
@@ -105,19 +102,12 @@
 
                 </div>
 
-                <button class="logout-button" id="logoutButton">
-                    <span>↪</span>
-                    <span data-en="Back to homepage" data-bn="হোমপেজে ফিরুন">
-                        Back to homepage
-                    </span>
-                </button>
-
             </div>
 
         </aside>
 
         <!-- MAIN AREA -->
-        <main class="main-area">
+        <main class="main-area" id="mainContent" tabindex="-1">
 
             <!-- TOPBAR -->
             <header class="topbar">
@@ -156,6 +146,12 @@
                         ♧<i></i>
                     </button>
 
+                    <button type="button" class="profile-button" id="profileButton"
+                            aria-haspopup="dialog" aria-controls="profileModal"
+                            aria-expanded="false" aria-label="Open profile">
+                        <span class="profile-button-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg></span>
+                        <span data-en="Profile" data-bn="প্রোফাইল">Profile</span>
+                    </button>
                     <div class="top-avatar" id="citizenTopAvatar">CF</div>
 
                 </div>
@@ -164,6 +160,82 @@
 
             <!-- CONTENT -->
             <div class="content-wrap">
+
+                <!-- LOCAL NEWSFEED -->
+                <section class="page-section" id="section-newsfeed" hidden>
+                    <div class="page-title-row newsfeed-title-row">
+                        <div>
+                            <div class="eyebrow">
+                                <span class="eyebrow-line"></span>
+                                <span data-en="YOUR NEIGHBOURHOOD" data-bn="আপনার প্রতিবেশ">YOUR NEIGHBOURHOOD</span>
+                            </div>
+                            <h1 data-en="Community newsfeed" data-bn="কমিউনিটি নিউজফিড">Community newsfeed</h1>
+                            <p data-en="Reports near you, with updates from your community."
+                               data-bn="আপনার এলাকার অভিযোগ ও কমিউনিটির আপডেট দেখুন।">Reports near you, with updates from your community.</p>
+                        </div>
+                        <button type="button" class="location-button" id="newsfeedLocateButton"
+                                data-en="Use my location" data-bn="আমার অবস্থান ব্যবহার করুন">Use my location</button>
+                    </div>
+
+                    <div class="newsfeed-controls">
+                        <label>
+                            <span data-en="Nearby radius" data-bn="এলাকার দূরত্ব">Nearby radius</span>
+                            <select id="newsfeedRadius">
+                                <option value="5">5 km</option>
+                                <option value="10" selected>10 km</option>
+                                <option value="25">25 km</option>
+                                <option value="50">50 km</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span data-en="Report status" data-bn="অভিযোগের অবস্থা">Report status</span>
+                            <select id="newsfeedStatusFilter">
+                                <option value="all" data-en="All reports" data-bn="সব অভিযোগ">All reports</option>
+                                <option value="pending" data-en="Pending" data-bn="অপেক্ষমাণ">Pending</option>
+                                <option value="in_progress" data-en="In progress" data-bn="চলমান">In progress</option>
+                                <option value="resolved" data-en="Resolved" data-bn="সমাধান হয়েছে">Resolved</option>
+                                <option value="rejected" data-en="Rejected" data-bn="বাতিল">Rejected</option>
+                            </select>
+                        </label>
+                        <button type="button" class="cancel-button" id="refreshNewsfeed"
+                                data-en="Refresh reports" data-bn="অভিযোগ রিফ্রেশ করুন">Refresh reports</button>
+                    </div>
+
+                    <p class="newsfeed-privacy-note" data-en="Your location is used once to find nearby reports. Civic Fix does not track you in the background."
+                       data-bn="আপনার কাছের অভিযোগ খুঁজতে অবস্থান একবার ব্যবহার করা হয়। Civic Fix পেছনে আপনাকে অনুসরণ করে না।">
+                        Your location is used once to find nearby reports. Civic Fix does not track you in the background.
+                    </p>
+
+                    <div class="newsfeed-layout">
+                        <section class="newsfeed-reports-panel" aria-label="Nearby community reports">
+                            <div class="newsfeed-list-heading">
+                                <div>
+                                    <h2 data-en="Service requests" data-bn="সেবা অনুরোধ">Service requests</h2>
+                                    <p data-en="Community reports near your location" data-bn="আপনার কাছাকাছি এলাকার নাগরিক প্রতিবেদন">Community reports near your location</p>
+                                </div>
+                                <span><strong id="newsfeedCount">0</strong><small data-en=" reports" data-bn="টি প্রতিবেদন"> reports</small></span>
+                            </div>
+                            <div id="newsfeedList" class="newsfeed-list" aria-live="polite"></div>
+                        </section>
+                        <section class="panel newsfeed-map-panel" aria-label="Nearby report map">
+                            <div id="newsfeedMap" aria-label="Map showing nearby reports"></div>
+                            <form id="newsfeedMapSearch" class="newsfeed-map-search" role="search">
+                                <label class="visually-hidden" for="newsfeedMapSearchInput">Search the map by location or address</label>
+                                <span class="newsfeed-map-search-icon" aria-hidden="true"></span>
+                                <input id="newsfeedMapSearchInput" type="search" maxlength="180" autocomplete="off" placeholder="Search for a location or address">
+                                <button type="submit" data-en="Search" data-bn="খুঁজুন">Search</button>
+                            </form>
+                            <p id="newsfeedMapSearchStatus" class="newsfeed-map-search-status" role="status" aria-live="polite" hidden></p>
+                            <button type="button" class="newsfeed-map-locate" id="newsfeedMapLocate" aria-label="Center map on my location" title="My location"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2"></circle><path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path></svg></button>
+                            <div id="newsfeedMapStatus" class="newsfeed-map-status" role="status">
+                                <span data-en="Search for a place or use your location to view nearby reports."
+                                      data-bn="ম্যাপে কাছাকাছি প্রতিবেদন দেখতে আপনার অবস্থান শেয়ার করুন।">
+                                    Search for a place or use your location to view nearby reports.
+                                </span>
+                            </div>
+                        </section>
+                    </div>
+                </section>
 
                 <!-- OVERVIEW -->
                 <section class="page-section active" id="section-overview">
@@ -331,83 +403,7 @@
 
                         </section>
 
-                        <section class="panel steps-panel">
 
-                            <div class="panel-heading">
-
-                                <div>
-                                    <h3 data-en="How Civic Fix works"
-                                        data-bn="Civic Fix যেভাবে কাজ করে">
-                                        How Civic Fix works
-                                    </h3>
-
-                                    <p data-en="Your report can create real change."
-                                       data-bn="আপনার অভিযোগ বাস্তব পরিবর্তন আনতে পারে।">
-                                        Your report can create real change.
-                                    </p>
-                                </div>
-
-                            </div>
-
-                            <div class="step-list">
-
-                                <div class="step">
-                                    <span class="step-number">01</span>
-
-                                    <div>
-                                        <strong data-en="Tell us the issue" data-bn="সমস্যাটি জানান">
-                                            Tell us the issue
-                                        </strong>
-
-                                        <p data-en="Describe the problem and where it is happening."
-                                           data-bn="সমস্যা ও অবস্থান লিখে জানান।">
-                                            Describe the problem and where it is happening.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div class="step">
-                                    <span class="step-number">02</span>
-
-                                    <div>
-                                        <strong data-en="We review & route it" data-bn="যাচাই ও প্রেরণ">
-                                            We review & route it
-                                        </strong>
-
-                                        <p data-en="Our team reviews it and sends it to the right institution."
-                                           data-bn="আমাদের টিম যাচাই করে সঠিক প্রতিষ্ঠানে পাঠায়।">
-                                            Our team reviews it and sends it to the right institution.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div class="step">
-                                    <span class="step-number">03</span>
-
-                                    <div>
-                                        <strong data-en="Track the progress" data-bn="অগ্রগতি দেখুন">
-                                            Track the progress
-                                        </strong>
-
-                                        <p data-en="Follow updates until the issue is resolved."
-                                           data-bn="সমাধান না হওয়া পর্যন্ত আপডেট দেখুন।">
-                                            Follow updates until the issue is resolved.
-                                        </p>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            <div class="trust-note">
-                                <span>✦</span>
-
-                                <p data-en="Every report is reviewed. AI helps our team organize reports, while people make the final decisions."
-                                   data-bn="প্রতিটি অভিযোগ যাচাই করা হয়। AI সহায়তা করে, তবে চূড়ান্ত সিদ্ধান্ত নেন মানুষ।">
-                                    Every report is reviewed. AI helps our team organize reports, while people make the final decisions.
-                                </p>
-                            </div>
-
-                        </section>
 
                     </div>
 
@@ -557,6 +553,11 @@
                                 </div>
 
                             </div>
+
+                            <p class="location-feed-hint" data-en="Add GPS coordinates to place this report in the nearby Newsfeed map. You can use your current location."
+                               data-bn="কাছের নিউজফিড মানচিত্রে অভিযোগটি দেখাতে GPS অবস্থান যোগ করুন। বর্তমান অবস্থান ব্যবহার করতে পারেন।">
+                                Add GPS coordinates to place this report in the nearby Newsfeed map. You can use your current location.
+                            </p>
 
                             <button type="button" class="location-button" id="locationButton">
                                 ◎
@@ -769,6 +770,50 @@
 
                 </section>
 
+                <!-- LEADERBOARD -->
+                <section class="page-section" id="section-leaderboard" hidden>
+                    <div class="page-title-row">
+                        <div>
+                            <div class="eyebrow">
+                                <span class="eyebrow-line"></span>
+                                <span data-en="COMMUNITY IMPACT" data-bn="কমিউনিটির অবদান">COMMUNITY IMPACT</span>
+                            </div>
+                            <h1 data-en="Leaderboard" data-bn="লিডারবোর্ড">Leaderboard</h1>
+                            <p data-en="See how your verified reports contribute to your community."
+                               data-bn="আপনার যাচাইকৃত অভিযোগ কীভাবে কমিউনিটিতে অবদান রাখছে দেখুন।">
+                                See how your verified reports contribute to your community.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="leaderboard-summary-grid">
+                        <article class="leaderboard-score-card">
+                            <span data-en="Your points" data-bn="আপনার পয়েন্ট">Your points</span>
+                            <strong id="myLeaderboardPoints">0</strong>
+                            <small data-en="10 points per legitimate report" data-bn="প্রতি বৈধ অভিযোগে ১০ পয়েন্ট">10 points per legitimate report</small>
+                        </article>
+                        <article class="leaderboard-rank-card">
+                            <span data-en="Your rank" data-bn="আপনার অবস্থান">Your rank</span>
+                            <strong id="myLeaderboardRank">—</strong>
+                            <small id="myLeaderboardReportCount">0 legitimate reports</small>
+                        </article>
+                    </div>
+
+                    <div class="panel leaderboard-panel">
+                        <div class="leaderboard-heading">
+                            <h2 data-en="Citizen rankings" data-bn="নাগরিকদের র‍্যাঙ্কিং">Citizen rankings</h2>
+                            <span data-en="Active citizens" data-bn="সক্রিয় নাগরিক">Active citizens</span>
+                        </div>
+                        <p class="leaderboard-rule" data-en="Reports earn points after they are moved to In progress or Resolved. Pending and rejected reports do not earn points."
+                           data-bn="অভিযোগ In progress বা Resolved হলে পয়েন্ট পাওয়া যায়। Pending ও বাতিল অভিযোগে পয়েন্ট নেই.">
+                            Reports earn points after they are moved to In progress or Resolved. Pending and rejected reports do not earn points.
+                        </p>
+                        <ol class="leaderboard-list" id="leaderboardList" aria-live="polite">
+                            <li class="leaderboard-loading" data-en="Loading leaderboard…" data-bn="লিডারবোর্ড লোড হচ্ছে…">Loading leaderboard…</li>
+                        </ol>
+                    </div>
+                </section>
+
             </div>
 
             <!-- FOOTER -->
@@ -789,6 +834,88 @@
 
         </main>
 
+    </div>
+
+    <!-- CITIZEN PROFILE -->
+    <div class="modal-backdrop profile-modal-backdrop" id="profileModal"
+         aria-hidden="true" role="dialog" aria-modal="true"
+         aria-labelledby="profileModalTitle">
+        <section class="profile-modal">
+            <button type="button" class="modal-close" id="closeProfileModal"
+                    aria-label="Close profile">×</button>
+            <p class="aside-kicker" data-en="ACCOUNT SETTINGS" data-bn="অ্যাকাউন্ট সেটিংস">ACCOUNT SETTINGS</p>
+            <h2 id="profileModalTitle" data-en="Your profile" data-bn="আপনার প্রোফাইল">Your profile</h2>
+            <p class="profile-intro" data-en="Update your contact details and account photo." data-bn="আপনার যোগাযোগের তথ্য ও অ্যাকাউন্টের ছবি হালনাগাদ করুন।">Update your contact details and account photo.</p>
+
+            <form id="profileForm" novalidate>
+                <div class="profile-photo-row">
+                    <div class="profile-photo-preview" id="profilePhotoPreview">CF</div>
+                    <label class="profile-photo-picker" for="profileImageFile" data-en="Upload a picture" data-bn="ছবি আপলোড করুন">Upload a picture</label>
+                    <input type="file" id="profileImageFile" name="profileImage" accept="image/jpeg,image/png,image/webp" hidden>
+                    <small data-en="JPG, PNG or WebP. Maximum 2 MB." data-bn="JPG, PNG বা WebP। সর্বোচ্চ ২ MB।">JPG, PNG or WebP. Maximum 2 MB.</small>
+                </div>
+
+                <div class="profile-fields-grid">
+                    <label><span data-en="Full name" data-bn="পুরো নাম">Full name</span>
+                        <input id="profileFullName" name="fullName" autocomplete="name" maxlength="100" required>
+                    </label>
+                    <label><span data-en="Phone number" data-bn="ফোন নম্বর">Phone number</span>
+                        <input id="profilePhone" name="phone" type="tel" autocomplete="tel" maxlength="18" placeholder="+8801XXXXXXXXX">
+                    </label>
+                    <label><span data-en="City / area" data-bn="শহর / এলাকা">City / area</span>
+                        <input id="profileCity" name="city" autocomplete="address-level2" maxlength="120">
+                    </label>
+                    <label><span data-en="Email address" data-bn="ইমেইল ঠিকানা">Email address</span>
+                        <input id="profileEmail" name="email" type="email" autocomplete="email" maxlength="255">
+                    </label>
+                </div>
+
+                <div class="profile-password-section">
+                    <h3 data-en="Change password" data-bn="পাসওয়ার্ড পরিবর্তন">Change password</h3>
+                    <p data-en="Current password is required to change contact details or a password. Google accounts can leave it blank." data-bn="যোগাযোগের তথ্য বা পাসওয়ার্ড বদলাতে বর্তমান পাসওয়ার্ড লাগবে। Google অ্যাকাউন্টে এটি ফাঁকা রাখা যাবে।">Current password is required to change contact details or a password. Google accounts can leave it blank.</p>
+                    <div class="profile-fields-grid">
+                        <label><span data-en="Current password" data-bn="বর্তমান পাসওয়ার্ড">Current password</span>
+                            <input id="profileCurrentPassword" name="currentPassword" type="password" autocomplete="current-password">
+                        </label>
+                        <label><span data-en="New password" data-bn="নতুন পাসওয়ার্ড">New password</span>
+                            <input id="profileNewPassword" name="newPassword" type="password" autocomplete="new-password" minlength="8">
+                        </label>
+                        <label><span data-en="Confirm new password" data-bn="নতুন পাসওয়ার্ড নিশ্চিত করুন">Confirm new password</span>
+                            <input id="profileConfirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="8">
+                        </label>
+                    </div>
+                </div>
+
+                <div id="profileMessage" class="profile-message" role="status" aria-live="polite"></div>
+                <div class="profile-modal-actions">
+                    <button type="button" class="logout-button profile-logout-button" id="profileLogoutButton">
+                        <span aria-hidden="true">↪</span><span data-en="Log out" data-bn="লগ আউট">Log out</span>
+                    </button>
+                    <div>
+                        <button type="button" class="cancel-button" id="cancelProfileModal" data-en="Cancel" data-bn="বাতিল">Cancel</button>
+                        <button type="submit" class="submit-button" id="saveProfileButton" data-en="Save changes" data-bn="পরিবর্তন সংরক্ষণ">Save changes</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <!-- FIRST VISIT LOCATION PROMPT -->
+    <div class="modal-backdrop location-permission-backdrop" id="locationPermissionPrompt"
+         aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="locationPromptTitle"
+         aria-describedby="locationPromptDescription">
+        <section class="location-permission-modal">
+            <div class="location-permission-icon" aria-hidden="true">⌖</div>
+            <p class="aside-kicker" data-en="LOCATION ACCESS" data-bn="অবস্থানের অনুমতি">LOCATION ACCESS</p>
+            <h2 id="locationPromptTitle" data-en="Allow access to your location?" data-bn="আপনার অবস্থান ব্যবহারের অনুমতি দেবেন?">Allow access to your location?</h2>
+            <p id="locationPromptDescription"
+               data-en="Your location can help add accurate coordinates to a community issue report. Your browser will ask for permission, and you can still enter an address manually."
+               data-bn="কমিউনিটির সমস্যা জানানোর সময় সঠিক স্থানাঙ্ক যোগ করতে আপনার অবস্থান সাহায্য করবে। ব্রাউজার অনুমতি চাইবে; চাইলে ঠিকানা নিজে লিখতে পারবেন।">Your location can help add accurate coordinates to a community issue report. Your browser will ask for permission, and you can still enter an address manually.</p>
+            <div class="location-prompt-actions">
+                <button type="button" class="cancel-button" id="locationPromptLater" data-en="Not now" data-bn="এখন নয়">Not now</button>
+                <button type="button" class="submit-button" id="locationPromptAllow" data-en="Allow location" data-bn="অবস্থানের অনুমতি দিন">Allow location</button>
+            </div>
+        </section>
     </div>
 
     <!-- TOAST -->
@@ -839,6 +966,8 @@
 
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
     <script src="js/citizen.js"></script>
 
 </body>

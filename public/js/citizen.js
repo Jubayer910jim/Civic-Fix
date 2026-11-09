@@ -9,8 +9,24 @@
    1. GLOBAL VARIABLES AND CONFIGURATION
 ========================================================= */
 
-let currentLanguage = "en";
+let currentLanguage = localStorage.getItem("civicFixLanguage") === "bn" ? "bn" : "en";
 let citizenReports = [];
+let citizenLeaderboard = [];
+let currentCitizenScore = { rank: null, legitimateReports: 0, points: 0 };
+let hasLoadedLeaderboard = false;
+let citizenCurrentLocation = null;
+let newsfeedReports = [];
+let hasLoadedNewsfeed = false;
+let communityMap = null;
+let communityMapMarkers = [];
+let communityReportMarkers = new Map();
+let communitySearchMarker = null;
+let newsfeedAreaLocation = null;
+let lastNewsfeedGeocodeAt = 0;
+let newsfeedGeocodeCache = new Map();
+let communityRadiusCircle = null;
+let isCitizenAuthenticated = false;
+let serverRequestsLocationPermission = false;
 
 let citizenProfile = {
     full_name: "Citizen",
@@ -32,6 +48,8 @@ const $ = (id) => document.getElementById(id);
 
 let selectedImageFiles = [];
 let previewObjectURLs = [];
+let profilePreviewObjectURL = null;
+let profileFocusReturn = null;
 let isSubmittingReport = false;
 
 
@@ -74,12 +92,16 @@ function showToast(message) {
         return;
     }
 
+    toast.hidden = false;
+    toast.style.display = "block";
     toast.textContent = message;
     toast.classList.add("show");
 
     window.clearTimeout(showToast.timeoutId);
     showToast.timeoutId = window.setTimeout(() => {
         toast.classList.remove("show");
+        toast.hidden = true;
+        toast.style.display = "none";
     }, 3000);
 }
 
@@ -267,13 +289,22 @@ function updateProfileInterface() {
         $("citizenProfileName").textContent = fullName;
     }
 
-    if ($("citizenAvatarInitials")) {
-        $("citizenAvatarInitials").textContent = initials;
-    }
-
-    if ($("citizenTopAvatar")) {
-        $("citizenTopAvatar").textContent = initials;
-    }
+    [$("citizenAvatarInitials"), $("citizenTopAvatar")].forEach(avatar => {
+        if (!avatar) return;
+        avatar.replaceChildren();
+        if (citizenProfile.profile_image) {
+            const image = document.createElement("img");
+            image.className = "citizen-image-avatar";
+            image.src = citizenProfile.profile_image;
+            image.alt = `${fullName} profile photo`;
+            image.loading = "lazy";
+            image.decoding = "async";
+            image.onerror = () => { avatar.textContent = initials; };
+            avatar.appendChild(image);
+        } else {
+            avatar.textContent = initials;
+        }
+    });
 
     updateGreeting();
     updateAccountDropdown();
@@ -283,6 +314,8 @@ async function loadCitizenProfile() {
     try {
         const data = await apiRequest(`${API_URL}/profile`);
         const profile = data.profile || data.user || data.citizen || data;
+        isCitizenAuthenticated = true;
+        serverRequestsLocationPermission = data.requestLocationPermission === true;
 
         citizenProfile = {
             ...citizenProfile,
@@ -296,16 +329,21 @@ async function loadCitizenProfile() {
         };
 
         updateProfileInterface();
+        return true;
 
     } catch (error) {
-        console.error("Unable to load citizen profile:", error);
+        const isFilePage = window.location.protocol === "file:";
+        if (error.status !== 401 && !isFilePage) {
+            console.error("Unable to load citizen profile:", error);
+        }
 
-        if (error.status !== 401) {
+        if (error.status !== 401 && !isFilePage) {
             showToast(getCurrentText(
                 "Could not load your profile.",
                 "আপনার প্রোফাইল লোড করা যায়নি।"
             ));
         }
+        return false;
     }
 }
 
@@ -330,7 +368,7 @@ function createAccountDropdown() {
     dropdown.innerHTML = `
         <strong id="accountDropdownName">Citizen</strong>
         <small id="accountDropdownEmail"></small>
-        <button type="button" id="accountDropdownLogout">
+        <button type="button" class="logout-button" id="accountDropdownLogout">
             ${getCurrentText("Log out", "লগ আউট")}
         </button>
     `;
@@ -371,6 +409,198 @@ function updateAccountDropdown() {
 }
 
 
+function setProfileMessage(message, isSuccess = false) {
+    const element = $("profileMessage");
+    if (!element) return;
+    element.textContent = message;
+    element.classList.toggle("success", isSuccess);
+}
+
+function showProfilePhotoPreview(imageUrl) {
+    const preview = $("profilePhotoPreview");
+    if (!preview) return;
+    if (profilePreviewObjectURL) {
+        URL.revokeObjectURL(profilePreviewObjectURL);
+        profilePreviewObjectURL = null;
+    }
+    preview.replaceChildren();
+    if (imageUrl) {
+        const image = document.createElement("img");
+        image.src = imageUrl;
+        image.alt = "Profile photo preview";
+        image.decoding = "async";
+        image.onerror = () => { preview.textContent = getInitials(citizenProfile.full_name); };
+        preview.appendChild(image);
+    } else {
+        preview.textContent = getInitials(citizenProfile.full_name);
+    }
+}
+
+function openProfileModal() {
+    const modal = $("profileModal");
+    if (!modal) return;
+    profileFocusReturn = document.activeElement;
+    if ($("citizenAccountDropdown")) $("citizenAccountDropdown").hidden = true;
+    $("profileFullName").value = citizenProfile.full_name || "";
+    $("profilePhone").value = citizenProfile.phone || "";
+    $("profileCity").value = citizenProfile.city || "";
+    $("profileEmail").value = citizenProfile.email || "";
+    $("profileCurrentPassword").value = "";
+    $("profileNewPassword").value = "";
+    $("profileConfirmPassword").value = "";
+    $("profileImageFile").value = "";
+    setProfileMessage("");
+    showProfilePhotoPreview(citizenProfile.profile_image);
+    modal.classList.add("show");
+    modal.hidden = false;
+    modal.style.display = "grid";
+    modal.setAttribute("aria-hidden", "false");
+    if ($("profileButton")) $("profileButton").setAttribute("aria-expanded", "true");
+    document.body.style.overflow = "hidden";
+    $("profileFullName").focus();
+}
+
+function closeProfileModal() {
+    const modal = $("profileModal");
+    if (!modal) return;
+    modal.classList.remove("show");
+    modal.hidden = true;
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+    showProfilePhotoPreview(citizenProfile.profile_image);
+    if ($("profileButton")) $("profileButton").setAttribute("aria-expanded", "false");
+    const focusTarget = profileFocusReturn;
+    profileFocusReturn = null;
+    if (focusTarget instanceof HTMLElement && focusTarget.isConnected) focusTarget.focus();
+}
+
+if ($("profileButton")) $("profileButton").addEventListener("click", openProfileModal);
+if ($("closeProfileModal")) $("closeProfileModal").addEventListener("click", closeProfileModal);
+if ($("cancelProfileModal")) $("cancelProfileModal").addEventListener("click", closeProfileModal);
+if ($("profileLogoutButton")) $("profileLogoutButton").addEventListener("click", logoutCitizen);
+
+if ($("profileModal")) {
+    $("profileModal").addEventListener("click", event => {
+        if (event.target === $("profileModal")) closeProfileModal();
+    });
+    $("profileModal").addEventListener("keydown", event => {
+        if (!$("profileModal").classList.contains("show")) return;
+        if (event.key === "Escape") {
+            event.preventDefault();
+            closeProfileModal();
+            return;
+        }
+        if (event.key !== "Tab") return;
+
+        const focusable = [...$("profileModal").querySelectorAll(
+            'button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )].filter(element => element.getClientRects().length > 0);
+        if (!focusable.length) {
+            event.preventDefault();
+            return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+}
+
+if ($("profileImageFile")) {
+    $("profileImageFile").addEventListener("change", () => {
+        const file = $("profileImageFile").files[0];
+        if (!file) return showProfilePhotoPreview(citizenProfile.profile_image);
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type) || file.size > 2 * 1024 * 1024) {
+            $("profileImageFile").value = "";
+            showProfilePhotoPreview(citizenProfile.profile_image);
+            setProfileMessage("Choose a JPG, PNG or WebP image smaller than 2 MB.");
+            return;
+        }
+        const previewURL = URL.createObjectURL(file);
+        showProfilePhotoPreview(previewURL);
+        profilePreviewObjectURL = previewURL;
+        setProfileMessage("");
+    });
+}
+
+if ($("profileForm")) {
+    $("profileForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const newPassword = $("profileNewPassword").value;
+        const confirmPassword = $("profileConfirmPassword").value;
+        const emailInput = $("profileEmail");
+        const email = emailInput.value.trim();
+        const phone = $("profilePhone").value.trim();
+        const currentPassword = $("profileCurrentPassword").value;
+
+        if (email && !emailInput.checkValidity()) {
+            setProfileMessage("Enter a valid email address.");
+            emailInput.focus();
+            return;
+        }
+        if (newPassword && newPassword !== confirmPassword) {
+            setProfileMessage("The new passwords do not match.");
+            $("profileConfirmPassword").focus();
+            return;
+        }
+        if (!newPassword && confirmPassword) {
+            setProfileMessage("Enter a new password before confirming it.");
+            $("profileNewPassword").focus();
+            return;
+        }
+        if (newPassword && (newPassword.length < 8 || newPassword.length > 72)) {
+            setProfileMessage("Your new password must be 8 to 72 characters.");
+            $("profileNewPassword").focus();
+            return;
+        }
+
+        const phoneDigits = value => {
+            let digits = value.replace(/\D/g, "");
+            if (digits.startsWith("880")) digits = digits.slice(3);
+            else if (digits.startsWith("0")) digits = digits.slice(1);
+            return digits;
+        };
+        const emailChanged = email.toLowerCase() !== String(citizenProfile.email || "").toLowerCase();
+        const phoneChanged = phoneDigits(phone) !== phoneDigits(String(citizenProfile.phone || ""));
+        if ((newPassword || emailChanged || phoneChanged) &&
+            citizenProfile.auth_provider !== "google" && !currentPassword) {
+            setProfileMessage("Enter your current password to change your email, phone or password.");
+            $("profileCurrentPassword").focus();
+            return;
+        }
+
+        const formData = new FormData();
+        ["fullName", "phone", "city", "email", "currentPassword", "newPassword"].forEach(name => {
+            formData.append(name, $("profileForm").elements[name].value);
+        });
+        const selectedPhoto = $("profileImageFile").files[0];
+        if (selectedPhoto) formData.append("profileImage", selectedPhoto);
+        const saveButton = $("saveProfileButton");
+        saveButton.disabled = true;
+        setProfileMessage(getCurrentText("Saving your profile...", "প্রোফাইল সংরক্ষণ হচ্ছে..."));
+        try {
+            const data = await apiRequest(`${API_URL}/profile`, {
+                method: "PUT",
+                body: formData
+            });
+            citizenProfile = { ...citizenProfile, ...(data.profile || {}) };
+            updateProfileInterface();
+            closeProfileModal();
+            showToast(getCurrentText("Profile updated successfully.", "প্রোফাইল হালনাগাদ হয়েছে।"));
+        } catch (error) {
+            setProfileMessage(error.message || "Unable to update your profile.");
+        } finally {
+            saveButton.disabled = false;
+        }
+    });
+}
+
 /* =========================================================
    6. DASHBOARD STATISTICS
 ========================================================= */
@@ -409,6 +639,484 @@ async function loadCitizenStats() {
             // Use the currently loaded report list as a fallback.
             calculateStatisticsFromReports();
         }
+    }
+}
+
+function renderCitizenLeaderboard() {
+    const list = $("leaderboardList");
+    if (!list) return;
+
+    const points = $("myLeaderboardPoints");
+    const rank = $("myLeaderboardRank");
+    const reportCount = $("myLeaderboardReportCount");
+    const locale = currentLanguage === "bn" ? "bn-BD" : "en-US";
+    const numberFormat = new Intl.NumberFormat(locale);
+
+    if (points) points.textContent = numberFormat.format(currentCitizenScore.points || 0);
+    if (rank) {
+        rank.textContent = currentCitizenScore.rank
+            ? `#${numberFormat.format(currentCitizenScore.rank)}`
+            : getCurrentText("—", "—");
+    }
+    if (reportCount) {
+        const count = numberFormat.format(currentCitizenScore.legitimateReports || 0);
+        reportCount.textContent = currentLanguage === "bn"
+            ? `${count}টি বৈধ অভিযোগ`
+            : `${count} legitimate report${Number(currentCitizenScore.legitimateReports) === 1 ? "" : "s"}`;
+    }
+
+    if (!citizenLeaderboard.length) {
+        list.innerHTML = `<li class="leaderboard-empty">${escapeHTML(getCurrentText(
+            "No active citizen rankings yet.",
+            "এখনও কোনো সক্রিয় নাগরিকের র‍্যাঙ্কিং নেই।"
+        ))}</li>`;
+        return;
+    }
+
+    list.innerHTML = citizenLeaderboard.map(person => `
+        <li class="leaderboard-item${person.isCurrentUser ? " is-current-user" : ""}">
+            <span class="leaderboard-rank">#${numberFormat.format(person.rank)}</span>
+            <span class="leaderboard-citizen">
+                <strong>${escapeHTML(person.name)}</strong>
+                ${person.isCurrentUser ? `<small>${escapeHTML(getCurrentText("You", "আপনি"))}</small>` : ""}
+            </span>
+            <span class="leaderboard-report-count">
+                <strong>${numberFormat.format(person.legitimateReports)}</strong>
+                <small>${escapeHTML(getCurrentText("reports", "টি অভিযোগ"))}</small>
+            </span>
+            <span class="leaderboard-points">
+                <strong>${numberFormat.format(person.points)}</strong>
+                <small>${escapeHTML(getCurrentText("points", "পয়েন্ট"))}</small>
+            </span>
+        </li>
+    `).join("");
+}
+
+async function loadCitizenLeaderboard() {
+    const list = $("leaderboardList");
+    if (!list) return;
+    list.innerHTML = `<li class="leaderboard-loading">${escapeHTML(getCurrentText(
+        "Loading leaderboard…",
+        "লিডারবোর্ড লোড হচ্ছে…"
+    ))}</li>`;
+
+    try {
+        const data = await apiRequest(`${API_URL}/leaderboard`);
+        citizenLeaderboard = Array.isArray(data.leaderboard) ? data.leaderboard : [];
+        currentCitizenScore = data.currentUser || { rank: null, legitimateReports: 0, points: 0 };
+        hasLoadedLeaderboard = true;
+        renderCitizenLeaderboard();
+    } catch (error) {
+        console.error("Unable to load citizen leaderboard:", error);
+        list.innerHTML = `<li class="leaderboard-empty">${escapeHTML(error.message || getCurrentText(
+            "Unable to load the leaderboard. Please try again.",
+            "লিডারবোর্ড লোড করা যায়নি। আবার চেষ্টা করুন।"
+        ))}</li>`;
+    }
+}
+
+function newsfeedStatusLabel(status) {
+    const labels = {
+        pending: ["Pending", "অপেক্ষমাণ"],
+        in_progress: ["In progress", "চলমান"],
+        resolved: ["Resolved", "সমাধান হয়েছে"],
+        rejected: ["Rejected", "বাতিল"]
+    };
+    const key = String(status || "pending").toLowerCase();
+    return getCurrentText(...(labels[key] || [getFriendlyStatus(key), getFriendlyStatus(key)]));
+}
+
+function newsfeedStatusClass(status) {
+    return ({ pending: "submitted", in_progress: "forwarded", resolved: "resolved", rejected: "rejected" })[
+        String(status || "pending").toLowerCase()
+    ] || "submitted";
+}
+
+function getNewsfeedCenter() {
+    return newsfeedAreaLocation || citizenCurrentLocation;
+}
+
+function ensureCommunityMap() {
+    if (!window.L) return false;
+    const center = getNewsfeedCenter() || { latitude: 23.685, longitude: 90.3563 };
+    if (!communityMap) {
+        communityMap = L.map("newsfeedMap", { scrollWheelZoom: true }).setView(
+            [center.latitude, center.longitude], getNewsfeedCenter() ? 13 : 7
+        );
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'
+        }).addTo(communityMap);
+    } else if (getNewsfeedCenter()) {
+        communityMap.setView([center.latitude, center.longitude], communityMap.getZoom());
+    }
+    return true;
+}
+function getFilteredNewsfeedReports() {
+    const filter = $("newsfeedStatusFilter")?.value || "all";
+    return newsfeedReports.filter(report => filter === "all" || String(report.status).toLowerCase() === filter);
+}
+
+function formatReportDateTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString(currentLanguage === "bn" ? "bn-BD" : "en-GB", {
+        day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+    });
+}
+
+function renderNewsfeed() {
+    const list = $("newsfeedList");
+    if (!list) return;
+    const reports = getFilteredNewsfeedReports();
+    if ($("newsfeedCount")) $("newsfeedCount").textContent = new Intl.NumberFormat(currentLanguage === "bn" ? "bn-BD" : "en-US").format(reports.length);
+
+    if (!reports.length) {
+        list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(getCurrentText(
+            newsfeedReports.length ? "No nearby reports match this status." : "No geolocated reports were found in this area yet.",
+            newsfeedReports.length ? "এই অবস্থার কাছাকাছি কোনো অভিযোগ নেই।" : "এই এলাকায় অবস্থান-চিহ্নিত কোনো অভিযোগ নেই।"
+        ))}</div>`;
+    } else {
+        list.innerHTML = reports.map(report => {
+            const reportId = Number(report.report_id);
+            const images = Array.isArray(report.images) ? report.images : [];
+            const imageMarkup = images.map((image, index) => {
+                const url = getSafeReportImageUrl(image);
+                if (!url) return "";
+                const alt = image.original_filename || `${report.title} ${index + 1}`;
+                return `<a class="newsfeed-image-link" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHTML(url)}" alt="${escapeHTML(alt)}" loading="lazy"></a>`;
+            }).join("");
+            const status = String(report.status || "pending").toLowerCase();
+            const dateTime = formatReportDateTime(report.created_at);
+            const description = String(report.description || "");
+            const canExpandDescription = description.length > 180;
+            const isoDate = Number.isNaN(new Date(report.created_at).getTime()) ? "" : new Date(report.created_at).toISOString();
+            return `
+                <article class="newsfeed-report" data-report-id="${reportId}">
+                    <div class="newsfeed-report-topline">
+                        <span class="status-pill ${newsfeedStatusClass(status)}">${escapeHTML(newsfeedStatusLabel(status))}</span>
+                        <time datetime="${escapeHTML(isoDate)}">${escapeHTML(dateTime)}</time>
+                    </div>
+                    <div class="newsfeed-report-heading">
+                        <div><small>${escapeHTML(report.category || getCurrentText("Community report", "কমিউনিটি অভিযোগ"))}</small>
+                        <h3>${escapeHTML(report.title || getCurrentText("Untitled report", "শিরোনামহীন অভিযোগ"))}</h3></div>
+                        <span class="newsfeed-distance">${escapeHTML(Number(report.distance_km || 0).toFixed(1))} km</span>
+                    </div>
+                    <p class="newsfeed-description" data-newsfeed-description="${reportId}">${escapeHTML(description)}</p>
+                    ${canExpandDescription ? `<button type="button" class="newsfeed-read-more" data-newsfeed-expand="${reportId}" aria-expanded="false">${escapeHTML(getCurrentText("Read more", "আরও দেখুন"))}</button>` : ""}
+                    <p class="newsfeed-location">⌖ ${escapeHTML(report.location || "")}</p>
+                    ${imageMarkup ? `<div class="newsfeed-images">${imageMarkup}</div>` : ""}
+                    <div class="newsfeed-report-footer">
+                        <button type="button" class="newsfeed-comments-toggle" data-comments-toggle="${reportId}" aria-expanded="false">
+                            ${escapeHTML(getCurrentText("Comments", "মন্তব্য"))} (${Number(report.comment_count || 0)})
+                        </button>
+                    </div>
+                    <div class="newsfeed-comments" id="newsfeed-comments-${reportId}" hidden>
+                        <div class="newsfeed-comment-list" data-comment-list="${reportId}"></div>
+                        <form class="newsfeed-comment-form" data-comment-form="${reportId}">
+                            <label class="visually-hidden" for="newsfeed-comment-input-${reportId}">${escapeHTML(getCurrentText("Write a comment", "মন্তব্য লিখুন"))}</label>
+                            <textarea id="newsfeed-comment-input-${reportId}" name="comment" maxlength="1000" required placeholder="${escapeHTML(getCurrentText("Write a helpful comment…", "সহায়ক মন্তব্য লিখুন…"))}"></textarea>
+                            <button type="submit" class="submit-button">${escapeHTML(getCurrentText("Comment", "মন্তব্য করুন"))}</button>
+                        </form>
+                    </div>
+                </article>
+            `;
+        }).join("");
+    }
+
+    if (!ensureCommunityMap()) {
+        const status = $("newsfeedMapStatus");
+        if (status) {
+            status.hidden = false;
+            status.textContent = getCurrentText(
+                "The interactive map could not load. Nearby reports are still listed.",
+                "ইন্টারঅ্যাকটিভ মানচিত্র লোড হয়নি। কাছের প্রতিবেদন তালিকায় আছে।"
+            );
+        }
+        return;
+    }
+
+    communityMapMarkers.forEach(marker => marker.remove());
+    communityMapMarkers = [];
+    communityReportMarkers.clear();
+    if (communityRadiusCircle) communityRadiusCircle.remove();
+    if (communitySearchMarker) {
+        communitySearchMarker.remove();
+        communitySearchMarker = null;
+    }
+
+    const center = getNewsfeedCenter();
+    const radiusKm = Number($("newsfeedRadius")?.value || 10);
+    if (center) {
+        communityRadiusCircle = L.circle(
+            [center.latitude, center.longitude],
+            { radius: radiusKm * 1000, color: "#087b65", weight: 1, fillColor: "#4bb995", fillOpacity: 0.08 }
+        ).addTo(communityMap);
+    }
+
+    if (citizenCurrentLocation) {
+        const userMarker = L.circleMarker(
+            [citizenCurrentLocation.latitude, citizenCurrentLocation.longitude],
+            { radius: 8, color: "#fff", weight: 3, fillColor: "#087c78", fillOpacity: 1 }
+        ).bindTooltip(getCurrentText("Your location", "আপনার অবস্থান")).addTo(communityMap);
+        communityMapMarkers.push(userMarker);
+    }
+
+    if (newsfeedAreaLocation) {
+        communitySearchMarker = L.marker(
+            [newsfeedAreaLocation.latitude, newsfeedAreaLocation.longitude]
+        ).bindTooltip(getCurrentText("Selected area", "নির্বাচিত এলাকা")).addTo(communityMap);
+        communityMapMarkers.push(communitySearchMarker);
+    }
+
+    reports.forEach(report => {
+        const latitude = Number(report.latitude);
+        const longitude = Number(report.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+        const reportId = String(report.report_id);
+        const status = String(report.status || "pending").toLowerCase();
+        const marker = L.circleMarker([latitude, longitude], {
+            radius: 8, color: "#fff", weight: 2,
+            fillColor: status === "resolved" ? "#31865f" : (status === "rejected" ? "#b94b42" : "#d08b35"),
+            fillOpacity: .96
+        });
+        const popup = `<strong>${escapeHTML(report.title || getCurrentText("Community report", "নাগরিক প্রতিবেদন"))}</strong><br>${escapeHTML(report.category || "")}<br>${escapeHTML(newsfeedStatusLabel(status))}<br>${escapeHTML(report.location || "")}`;
+        marker.bindPopup(popup).addTo(communityMap);
+        marker.on("click", () => {
+            document.querySelectorAll(".newsfeed-report.is-map-selected").forEach(card => card.classList.remove("is-map-selected"));
+            const card = document.querySelector(`.newsfeed-report[data-report-id="${reportId}"]`);
+            if (card) {
+                card.classList.add("is-map-selected");
+                card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+        });
+        communityReportMarkers.set(reportId, marker);
+        communityMapMarkers.push(marker);
+    });
+
+    if (communityRadiusCircle && reports.length) {
+        communityMap.fitBounds(communityRadiusCircle.getBounds(), { padding: [28, 28], maxZoom: 14 });
+    }
+    window.setTimeout(() => communityMap && communityMap.invalidateSize(), 80);
+}
+
+function focusNewsfeedReport(reportId) {
+    const id = String(reportId);
+    const report = newsfeedReports.find(item => String(item.report_id) === id);
+    const marker = communityReportMarkers.get(id);
+    if (report && marker && communityMap) {
+        communityMap.flyTo(marker.getLatLng(), Math.max(communityMap.getZoom(), 15), { duration: 0.45 });
+        marker.openPopup();
+    }
+    document.querySelectorAll(".newsfeed-report.is-map-selected").forEach(card => card.classList.remove("is-map-selected"));
+    const card = document.querySelector(`.newsfeed-report[data-report-id="${id}"]`);
+    if (card) {
+        card.classList.add("is-map-selected");
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+}
+
+async function searchNewsfeedMap(event) {
+    event.preventDefault();
+    const input = $("newsfeedMapSearchInput");
+    const button = $("newsfeedMapSearch")?.querySelector('button[type="submit"]');
+    const status = $("newsfeedMapSearchStatus");
+    const query = input?.value.trim();
+    if (!query || !button || !status) return;
+
+    button.disabled = true;
+    button.textContent = getCurrentText("Searching…", "খোঁজা হচ্ছে…");
+    status.hidden = false;
+    status.textContent = getCurrentText("Searching for this place…", "এই স্থানটি খোঁজা হচ্ছে…");
+
+    try {
+        const cacheKey = query.toLocaleLowerCase();
+        let place = newsfeedGeocodeCache.get(cacheKey);
+        if (!place) {
+            const elapsed = Date.now() - lastNewsfeedGeocodeAt;
+            if (elapsed < 1100) await new Promise(resolve => window.setTimeout(resolve, 1100 - elapsed));
+            lastNewsfeedGeocodeAt = Date.now();
+            const params = new URLSearchParams({ q: query });
+            const data = await apiRequest(`${API_URL}/geocode?${params.toString()}`);
+            place = data.place;
+            if (!place || !Number.isFinite(Number(place.lat)) || !Number.isFinite(Number(place.lon))) {
+                throw new Error(getCurrentText("No matching place was found. Try a nearby street or landmark.", "মিল পাওয়া যায়নি। কাছের রাস্তা বা স্থাপনার নাম দিয়ে চেষ্টা করুন।"));
+            }
+            if (newsfeedGeocodeCache.size >= 100) newsfeedGeocodeCache.delete(newsfeedGeocodeCache.keys().next().value);
+            newsfeedGeocodeCache.set(cacheKey, place);
+        }
+
+        newsfeedAreaLocation = { latitude: Number(place.lat), longitude: Number(place.lon) };
+        const label = place.name || place.display_name || query;
+        status.textContent = getCurrentText(`Showing reports near ${label}`, `${label} এলাকার প্রতিবেদন দেখানো হচ্ছে`);
+        ensureCommunityMap();
+        communityMap.setView([newsfeedAreaLocation.latitude, newsfeedAreaLocation.longitude], 14);
+        await loadNewsfeed();
+    } catch (error) {
+        status.hidden = false;
+        status.textContent = error.message || getCurrentText("Could not search for that place.", "স্থানটি খোঁজা যায়নি।");
+    } finally {
+        button.disabled = false;
+        button.textContent = getCurrentText("Search", "খুঁজুন");
+    }
+}
+async function loadNewsfeed() {
+    const list = $("newsfeedList");
+    if (!list) return;
+    const center = getNewsfeedCenter();
+    if (!center) {
+        list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(getCurrentText(
+            "Use your location or search for a place to see nearby reports.",
+            "কাছের প্রতিবেদন দেখতে আপনার অবস্থান ব্যবহার করুন বা কোনো স্থান খুঁজুন।"
+        ))}</div>`;
+        if ($("newsfeedMapStatus")) $("newsfeedMapStatus").hidden = false;
+        ensureCommunityMap();
+        return;
+    }
+    const radiusKm = Number($("newsfeedRadius")?.value || 10);
+    list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(getCurrentText("Loading nearby reports…", "কাছের প্রতিবেদন লোড হচ্ছে…"))}</div>`;
+    try {
+        const query = new URLSearchParams({
+            lat: String(center.latitude),
+            lng: String(center.longitude),
+            radiusKm: String(radiusKm)
+        });
+        const data = await apiRequest(`${API_URL}/newsfeed?${query.toString()}`);
+        newsfeedReports = Array.isArray(data.reports) ? data.reports : [];
+        hasLoadedNewsfeed = true;
+        const mapStatus = $("newsfeedMapStatus");
+        if (mapStatus) mapStatus.hidden = true;
+        renderNewsfeed();
+    } catch (error) {
+        console.error("Unable to load nearby reports:", error);
+        list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(error.message || getCurrentText("Unable to load nearby reports.", "কাছের প্রতিবেদন লোড করা যায়নি।"))}</div>`;
+    }
+}
+if ($("newsfeedMapSearch")) {
+    $("newsfeedMapSearch").addEventListener("submit", searchNewsfeedMap);
+}
+
+if ($("newsfeedMapLocate")) {
+    $("newsfeedMapLocate").addEventListener("click", () => {
+        if (!citizenCurrentLocation) {
+            $("newsfeedLocateButton")?.click();
+            return;
+        }
+        newsfeedAreaLocation = null;
+        const status = $("newsfeedMapSearchStatus");
+        if (status) status.hidden = true;
+        ensureCommunityMap();
+        communityMap.setView([citizenCurrentLocation.latitude, citizenCurrentLocation.longitude], 14);
+        loadNewsfeed();
+    });
+}
+if ($("newsfeedLocateButton")) {
+    $("newsfeedLocateButton").addEventListener("click", () => {
+        if (!navigator.geolocation) {
+            showToast(getCurrentText("Location is not supported by this browser.", "এই ব্রাউজারে অবস্থান সুবিধা নেই।"));
+            return;
+        }
+        const button = $("newsfeedLocateButton");
+        button.disabled = true;
+        button.textContent = getCurrentText("Finding your area…", "আপনার এলাকা খোঁজা হচ্ছে…");
+        navigator.geolocation.getCurrentPosition(position => {
+            citizenCurrentLocation = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+            newsfeedAreaLocation = null;
+            const mapSearchStatus = $("newsfeedMapSearchStatus");
+            if (mapSearchStatus) mapSearchStatus.hidden = true;
+            if ($("latitude")) $("latitude").value = position.coords.latitude.toFixed(7);
+            if ($("longitude")) $("longitude").value = position.coords.longitude.toFixed(7);
+            button.disabled = false;
+            button.textContent = getCurrentText("Update my location", "আমার অবস্থান আপডেট করুন");
+            loadNewsfeed();
+        }, error => {
+            button.disabled = false;
+            button.textContent = getCurrentText("Use my location", "আমার অবস্থান ব্যবহার করুন");
+            showToast(error.code === 1
+                ? getCurrentText("Location permission was denied.", "অবস্থানের অনুমতি দেওয়া হয়নি।")
+                : getCurrentText("Could not get your location. Please try again.", "অবস্থান পাওয়া যায়নি। আবার চেষ্টা করুন।"));
+        }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 });
+    });
+}
+
+if ($("refreshNewsfeed")) $("refreshNewsfeed").addEventListener("click", loadNewsfeed);
+if ($("newsfeedRadius")) $("newsfeedRadius").addEventListener("change", loadNewsfeed);
+if ($("newsfeedStatusFilter")) $("newsfeedStatusFilter").addEventListener("change", renderNewsfeed);
+
+if ($("newsfeedList")) {
+    $("newsfeedList").addEventListener("click", async event => {
+        const reportCard = event.target.closest(".newsfeed-report");
+        if (reportCard && !event.target.closest("button, a, input, textarea, form")) {
+            focusNewsfeedReport(reportCard.dataset.reportId);
+            return;
+        }
+        const expandButton = event.target.closest("[data-newsfeed-expand]");
+        if (expandButton) {
+            const description = document.querySelector(`[data-newsfeed-description="${expandButton.dataset.newsfeedExpand}"]`);
+            if (description) {
+                const expanded = expandButton.getAttribute("aria-expanded") !== "true";
+                description.classList.toggle("is-expanded", expanded);
+                expandButton.setAttribute("aria-expanded", String(expanded));
+                expandButton.textContent = getCurrentText(expanded ? "Show less" : "Read more", expanded ? "কম দেখুন" : "আরও দেখুন");
+            }
+            return;
+        }
+        const button = event.target.closest("[data-comments-toggle]");
+        if (!button) return;
+        const reportId = button.dataset.commentsToggle;
+        const panel = $(`newsfeed-comments-${reportId}`);
+        if (!panel) return;
+        panel.hidden = !panel.hidden;
+        button.setAttribute("aria-expanded", String(!panel.hidden));
+        if (!panel.hidden && panel.dataset.loaded !== "true") await loadReportComments(reportId, panel);
+    });
+
+    $("newsfeedList").addEventListener("submit", async event => {
+        const form = event.target.closest("[data-comment-form]");
+        if (!form) return;
+        event.preventDefault();
+        const reportId = form.dataset.commentForm;
+        const textarea = form.elements.comment;
+        const submitButton = form.querySelector('button[type="submit"]');
+        const comment = textarea.value.trim();
+        if (!comment || comment.length > 1000) return;
+        submitButton.disabled = true;
+        try {
+            await apiRequest(`${API_URL}/reports/${reportId}/comments`, {
+                method: "POST",
+                body: JSON.stringify({ comment })
+            });
+            textarea.value = "";
+            const report = newsfeedReports.find(item => String(item.report_id) === String(reportId));
+            if (report) report.comment_count = Number(report.comment_count || 0) + 1;
+            await loadReportComments(reportId, $(`newsfeed-comments-${reportId}`));
+            const toggle = document.querySelector(`[data-comments-toggle="${reportId}"]`);
+            if (toggle) toggle.textContent = `${getCurrentText("Comments", "মন্তব্য")} (${report?.comment_count || 0})`;
+        } catch (error) {
+            showToast(error.message || getCurrentText("Unable to post comment.", "মন্তব্য পাঠানো যায়নি।"));
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+}
+
+async function loadReportComments(reportId, panel) {
+    const commentList = panel?.querySelector(`[data-comment-list="${reportId}"]`);
+    if (!commentList) return;
+    commentList.innerHTML = `<p class="newsfeed-comment-loading">${escapeHTML(getCurrentText("Loading comments…", "মন্তব্য লোড হচ্ছে…"))}</p>`;
+    try {
+        const data = await apiRequest(`${API_URL}/reports/${reportId}/comments`);
+        const comments = Array.isArray(data.comments) ? data.comments : [];
+        commentList.innerHTML = comments.length ? comments.map(comment => `
+            <article class="newsfeed-comment">
+                <strong>${escapeHTML(comment.author || getCurrentText("Citizen", "নাগরিক"))}</strong>
+                <time>${escapeHTML(formatReportDateTime(comment.created_at))}</time>
+                <p>${escapeHTML(comment.comment_text)}</p>
+            </article>
+        `).join("") : `<p class="newsfeed-comment-loading">${escapeHTML(getCurrentText("No comments yet. Start the conversation.", "এখনও মন্তব্য নেই। আলোচনা শুরু করুন।"))}</p>`;
+        panel.dataset.loaded = "true";
+    } catch (error) {
+        commentList.innerHTML = `<p class="newsfeed-comment-loading">${escapeHTML(error.message || getCurrentText("Unable to load comments.", "মন্তব্য লোড করা যায়নি।"))}</p>`;
     }
 }
 
@@ -636,11 +1344,15 @@ async function loadCitizenReports() {
 ========================================================= */
 
 async function refreshCitizenDashboard() {
-    await Promise.allSettled([
-        loadCitizenProfile(),
-        loadCitizenReports(),
-        loadCitizenStats()
-    ]);
+    await loadCitizenProfile();
+
+    // Request private report data only after the profile confirms a session.
+    if (isCitizenAuthenticated) {
+        await Promise.allSettled([
+            loadCitizenReports(),
+            loadCitizenStats()
+        ]);
+    }
 
     updateProfileInterface();
     renderRecentReports();
@@ -654,23 +1366,26 @@ async function refreshCitizenDashboard() {
 ========================================================= */
 
 function navigate(sectionName) {
-    document.querySelectorAll(".page-section").forEach(section => {
-        section.classList.remove("active");
-    });
-
     const targetSection = $("section-" + sectionName);
+    if (!targetSection || !targetSection.classList.contains("page-section")) return;
 
-    if (targetSection) {
-        targetSection.classList.add("active");
-    }
+    // Keep inactive sections out of the accessibility tree and the page flow.
+    // This also keeps navigation correct if CSS fails to load.
+    document.querySelectorAll(".page-section").forEach(section => {
+        const isCurrent = section === targetSection;
+        section.classList.toggle("active", isCurrent);
+        section.hidden = !isCurrent;
+    });
 
     document.querySelectorAll(".nav-item").forEach(item => {
-        item.classList.toggle("active", item.dataset.section === sectionName);
+        const isCurrent = item.dataset.section === sectionName;
+        item.classList.toggle("active", isCurrent);
+        if (isCurrent) item.setAttribute("aria-current", "page");
+        else item.removeAttribute("aria-current");
     });
 
-    const selectedNavItem = document.querySelector(
-        `.nav-item[data-section="${sectionName}"]`
-    );
+    const selectedNavItem = [...document.querySelectorAll(".nav-item")]
+        .find(item => item.dataset.section === sectionName);
 
     const selectedNavText = selectedNavItem
         ? selectedNavItem.querySelector("span[data-en], span[data-bn]")
@@ -680,10 +1395,12 @@ function navigate(sectionName) {
 
     if (breadcrumb) {
         const fallbackLabels = {
+            newsfeed: ["Newsfeed", "নিউজফিড"],
             overview: ["Overview", "ওভারভিউ"],
             "new-report": ["Submit a complaint", "অভিযোগ জমা দিন"],
             "my-reports": ["My reports", "আমার অভিযোগ"],
-            notifications: ["Notifications", "নোটিফিকেশন"]
+            notifications: ["Notifications", "নোটিফিকেশন"],
+            leaderboard: ["Leaderboard", "লিডারবোর্ড"]
         };
 
         breadcrumb.textContent = selectedNavText
@@ -703,6 +1420,10 @@ function navigate(sectionName) {
     if (sectionName === "my-reports") {
         renderAllReports();
     }
+    if (sectionName === "leaderboard") {
+        loadCitizenLeaderboard();
+    }
+    if (sectionName === "newsfeed") loadNewsfeed();
 }
 
 // Buttons and links with data-section are handled in one place.
@@ -722,6 +1443,7 @@ document.addEventListener("click", event => {
 
 function setLanguage(language) {
     currentLanguage = language === "bn" ? "bn" : "en";
+    localStorage.setItem("civicFixLanguage", currentLanguage);
     document.documentElement.lang = currentLanguage;
 
     document.querySelectorAll("[data-en][data-bn]").forEach(element => {
@@ -768,12 +1490,40 @@ function setLanguage(language) {
     updateUploadLanguage();
     renderRecentReports();
     renderAllReports();
+    if (hasLoadedLeaderboard) renderCitizenLeaderboard();
+    if (hasLoadedNewsfeed) renderNewsfeed();
 }
 
 if ($("languageToggle")) {
     $("languageToggle").addEventListener("click", () => {
         setLanguage(currentLanguage === "en" ? "bn" : "en");
     });
+}
+
+function showFirstVisitLocationPrompt() {
+    const prompt = $("locationPermissionPrompt");
+    if (!prompt || localStorage.getItem("civicFixLocationPromptDecision")) return;
+
+    prompt.classList.add("show");
+    prompt.hidden = false;
+    prompt.style.display = "grid";
+    prompt.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+
+    const closePrompt = decision => {
+        localStorage.setItem("civicFixLocationPromptDecision", decision);
+        prompt.classList.remove("show");
+        prompt.hidden = true;
+        prompt.style.display = "none";
+        prompt.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+    };
+
+    $("locationPromptLater").addEventListener("click", () => closePrompt("later"), { once: true });
+    $("locationPromptAllow").addEventListener("click", () => {
+        closePrompt("allow");
+        if ($("locationButton")) $("locationButton").click();
+    }, { once: true });
 }
 
 
@@ -857,6 +1607,10 @@ if ($("locationButton")) {
 
         navigator.geolocation.getCurrentPosition(
             position => {
+                citizenCurrentLocation = {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                };
                 if ($("latitude")) {
                     $("latitude").value = position.coords.latitude.toFixed(7);
                 }
@@ -1410,6 +2164,8 @@ async function submitComplaint(event) {
 
         if ($("successModal")) {
             $("successModal").classList.add("show");
+            $("successModal").hidden = false;
+            $("successModal").style.display = "grid";
             $("successModal").setAttribute("aria-hidden", "false");
         }
 
@@ -1455,6 +2211,8 @@ function closeSuccessModal() {
     if (!modal) return;
 
     modal.classList.remove("show");
+    modal.hidden = true;
+    modal.style.display = "none";
     modal.setAttribute("aria-hidden", "true");
 }
 
@@ -1549,19 +2307,43 @@ if ($("logoutButton")) {
 ========================================================= */
 
 async function initializeCitizenPortal() {
+    // Modal backdrops are hidden until their corresponding action requests them.
+    ["profileModal", "locationPermissionPrompt", "successModal"].forEach(id => {
+        const modal = $(id);
+        if (modal && !modal.classList.contains("show")) {
+            modal.hidden = true;
+            modal.style.display = "none";
+            modal.setAttribute("aria-hidden", "true");
+        }
+    });
+
+    if ($("toast")) {
+        $("toast").hidden = true;
+        $("toast").style.display = "none";
+    }
+
     createImageUploadField();
     createAccountDropdown();
     applySavedTheme();
+    setLanguage(currentLanguage);
 
     updateProfileInterface();
     updateStatisticsOnScreen();
     updateUploadLanguage();
+    navigate("overview");
 
     if ($("charCount") && $("issueDescription")) {
         $("charCount").textContent = `${$("issueDescription").value.length} / 2000`;
     }
 
     await refreshCitizenDashboard();
+    if (window.location.protocol === "file:") {
+        // A directly opened HTML file bypasses Express, so it cannot receive
+        // the server's profile signal. Keep the page-level location prompt usable.
+        showFirstVisitLocationPrompt();
+    } else if (isCitizenAuthenticated && serverRequestsLocationPermission) {
+        showFirstVisitLocationPrompt();
+    }
 }
 
 initializeCitizenPortal();
