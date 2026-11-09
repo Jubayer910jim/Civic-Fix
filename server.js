@@ -10,7 +10,7 @@
 // ==========================================
 // 1. IMPORT PACKAGES
 // ==========================================
-
+const authRoutes = require("./routes/auth");
 const express = require("express");
 const path = require("path");
 const crypto = require("crypto");
@@ -22,6 +22,7 @@ const multer = require("multer");
 require("dotenv").config();
 
 const db = require("./config/db");
+
 
 
 // ==========================================
@@ -65,6 +66,8 @@ app.use(
         }
     })
 );
+// Registration and OTP routes
+app.use("/api/auth", authRoutes);
 
 
 // ==========================================
@@ -468,7 +471,7 @@ async function addImagesToReports(
 
         if (
             !imagesByReport[
-                image.report_id
+            image.report_id
             ]
         ) {
 
@@ -501,7 +504,7 @@ async function addImagesToReports(
 
         report.images =
             imagesByReport[
-                report.report_id
+            report.report_id
             ] || [];
 
     }
@@ -620,7 +623,7 @@ app.get(
         }
 
         catch (
-            error
+        error
         ) {
 
             console.error(
@@ -720,7 +723,7 @@ app.post(
                         email,
                         password_hash,
                         role,
-                        institution_id,
+                       
                         account_status
                     FROM users
                     WHERE email = ?
@@ -842,8 +845,8 @@ app.post(
                 role:
                     user.role,
 
-                institution_id:
-                    user.institution_id
+                
+                    
 
             };
 
@@ -910,7 +913,7 @@ app.post(
         }
 
         catch (
-            error
+        error
         ) {
 
             console.error(
@@ -1186,7 +1189,7 @@ app.get(
         }
 
         catch (
-            error
+        error
         ) {
 
             console.error(
@@ -1344,7 +1347,7 @@ app.get(
         }
 
         catch (
-            error
+        error
         ) {
 
             console.error(
@@ -1447,7 +1450,7 @@ app.get(
         }
 
         catch (
-            error
+        error
         ) {
 
             console.error(
@@ -1580,7 +1583,7 @@ app.get(
         }
 
         catch (
-            error
+        error
         ) {
 
             console.error(
@@ -2231,7 +2234,7 @@ app.post(
         }
 
         catch (
-            error
+        error
         ) {
 
             console.error(
@@ -2403,7 +2406,7 @@ app.get(
         }
 
         catch (
-            error
+        error
         ) {
 
             console.error(

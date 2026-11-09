@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +28,7 @@
             justify-content: space-between;
             align-items: center;
             background: #ffffff;
-            box-shadow: 0 2px 12px rgba(0,0,0,.06);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, .06);
         }
 
         .brand {
@@ -112,7 +113,7 @@
             display: grid;
             place-items: center;
             border-radius: 10px;
-            background: rgba(255,255,255,.15);
+            background: rgba(255, 255, 255, .15);
             flex-shrink: 0;
         }
 
@@ -204,7 +205,7 @@
         .method-tab.active {
             color: #087b50;
             background: #fff;
-            box-shadow: 0 2px 7px rgba(0,0,0,.07);
+            box-shadow: 0 2px 7px rgba(0, 0, 0, .07);
         }
 
         .form-group {
@@ -234,7 +235,7 @@
 
         .form-group input:focus {
             border-color: #0b9863;
-            box-shadow: 0 0 0 3px rgba(11,152,99,.10);
+            box-shadow: 0 0 0 3px rgba(11, 152, 99, .10);
         }
 
         .phone-input {
@@ -285,7 +286,7 @@
 
         .primary-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 7px 16px rgba(8,123,80,.20);
+            box-shadow: 0 7px 16px rgba(8, 123, 80, .20);
         }
 
         .primary-button:disabled,
@@ -399,497 +400,539 @@
 
 <body>
 
-<header class="register-header">
-    <a href="index.html" class="brand">Civic Fix</a>
+    <header class="register-header">
+        <a href="index.html" class="brand">Civic Fix</a>
 
-    <div class="header-actions">
-        <a href="index.html" data-en="Home" data-bn="হোম">Home</a>
-        <button class="language-button" id="languageToggle" type="button">বাংলা</button>
-    </div>
-</header>
-
-<main class="register-container">
-
-    <section class="register-info">
-        <h1 data-en="Make your community better." data-bn="আপনার কমিউনিটিকে আরও সুন্দর করুন।">
-            Make your community better.
-        </h1>
-
-        <p data-en="Join Civic Fix and help report local problems, follow their progress, and make your neighbourhood safer and cleaner."
-           data-bn="Civic Fix-এ যোগ দিন। এলাকার সমস্যা জানান, সমাধানের অগ্রগতি দেখুন এবং আপনার এলাকাকে আরও নিরাপদ ও পরিচ্ছন্ন করতে সাহায্য করুন।">
-            Join Civic Fix and help report local problems, follow their progress, and make your neighbourhood safer and cleaner.
-        </p>
-
-        <div class="info-points">
-            <div class="info-point">
-                <span class="info-icon">✓</span>
-                <span data-en="Report community problems" data-bn="এলাকার সমস্যা জানান">Report community problems</span>
-            </div>
-
-            <div class="info-point">
-                <span class="info-icon">✓</span>
-                <span data-en="Track your submitted reports" data-bn="আপনার জমা দেওয়া রিপোর্টের অগ্রগতি দেখুন">Track your submitted reports</span>
-            </div>
-
-            <div class="info-point">
-                <span class="info-icon">✓</span>
-                <span data-en="Help build a better Bangladesh" data-bn="একটি উন্নত বাংলাদেশ গড়তে সাহায্য করুন">Help build a better Bangladesh</span>
-            </div>
+        <div class="header-actions">
+            <a href="index.html" data-en="Home" data-bn="হোম">Home</a>
+            <button class="language-button" id="languageToggle" type="button">বাংলা</button>
         </div>
-    </section>
+    </header>
 
-    <section class="register-form-area">
+    <main class="register-container">
 
-        <!-- REGISTRATION VIEW -->
-        <div id="registrationView">
+        <section class="register-info">
+            <h1 data-en="Make your community better." data-bn="আপনার কমিউনিটিকে আরও সুন্দর করুন।">
+                Make your community better.
+            </h1>
 
-            <div class="form-heading">
-                <h2 data-en="Create your account" data-bn="আপনার অ্যাকাউন্ট তৈরি করুন">
-                    Create your account
-                </h2>
-                <p data-en="Register to become a Civic Fix citizen."
-                   data-bn="Civic Fix-এর নাগরিক হিসেবে নিবন্ধন করুন।">
-                    Register to become a Civic Fix citizen.
-                </p>
-            </div>
-
-            <div id="registerMessage" class="form-message" role="alert"></div>
-
-            <button type="button" class="google-button" id="googleRegister">
-                <span class="google-g">G</span>
-                <span data-en="Continue with Google" data-bn="Google দিয়ে চালিয়ে যান">
-                    Continue with Google
-                </span>
-            </button>
-
-            <div class="separator">
-                <span data-en="OR REGISTER WITH" data-bn="অথবা নিবন্ধন করুন">OR REGISTER WITH</span>
-            </div>
-
-            <div class="method-tabs">
-                <button type="button" class="method-tab active" id="emailTab"
-                        data-en="Email" data-bn="ইমেইল">Email</button>
-
-                <button type="button" class="method-tab" id="phoneTab"
-                        data-en="Phone (+880)" data-bn="ফোন (+880)">Phone (+880)</button>
-            </div>
-
-            <form id="registerForm">
-
-                <div class="form-group">
-                    <label for="fullName" data-en="Full name" data-bn="পুরো নাম">Full name</label>
-                    <input type="text" id="fullName" name="fullName"
-                           placeholder="Enter your full name" required maxlength="100">
-                </div>
-
-                <div class="form-group" id="emailGroup">
-                    <label for="email" data-en="Email address" data-bn="ইমেইল ঠিকানা">Email address</label>
-                    <input type="email" id="email" name="email"
-                           placeholder="example@gmail.com" autocomplete="email">
-                </div>
-
-                <div class="form-group hidden" id="phoneGroup">
-                    <label for="phone" data-en="Bangladesh mobile number" data-bn="বাংলাদেশি মোবাইল নম্বর">
-                        Bangladesh mobile number
-                    </label>
-
-                    <div class="phone-input">
-                        <span class="phone-prefix">+880</span>
-                        <input type="tel" id="phone" name="phone"
-                               placeholder="1XXXXXXXXX"
-                               inputmode="numeric" maxlength="10"
-                               autocomplete="tel-national">
-                    </div>
-
-                    <small class="password-note"
-                           data-en="Enter 10 digits after +880. Example: 1712345678"
-                           data-bn="+৮৮০-এর পর ১০টি সংখ্যা লিখুন। উদাহরণ: 1712345678">
-                        Enter 10 digits after +880. Example: 1712345678
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label for="password" data-en="Password" data-bn="পাসওয়ার্ড">Password</label>
-                    <input type="password" id="password" name="password"
-                           placeholder="Create a password" minlength="8"
-                           autocomplete="new-password" required>
-
-                    <small class="password-note"
-                           data-en="Password must contain at least 8 characters."
-                           data-bn="পাসওয়ার্ডে কমপক্ষে ৮টি অক্ষর থাকতে হবে।">
-                        Password must contain at least 8 characters.
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label for="confirmPassword" data-en="Confirm password" data-bn="পাসওয়ার্ড নিশ্চিত করুন">
-                        Confirm password
-                    </label>
-                    <input type="password" id="confirmPassword" name="confirmPassword"
-                           placeholder="Enter your password again"
-                           minlength="8" autocomplete="new-password" required>
-                </div>
-
-                <button type="submit" class="primary-button" id="registerButton"
-                        data-en="Create Account" data-bn="অ্যাকাউন্ট তৈরি করুন">
-                    Create Account
-                </button>
-            </form>
-
-            <div class="login-link">
-                <span data-en="Already have an account?" data-bn="আগেই অ্যাকাউন্ট আছে?">
-                    Already have an account?
-                </span>
-                <a href="login.html" data-en="Login" data-bn="লগইন">Login</a>
-            </div>
-        </div>
-
-        <!-- OTP VERIFICATION VIEW -->
-        <div id="otpView" class="hidden">
-
-            <div class="form-heading">
-                <h2 data-en="Verify your account" data-bn="আপনার অ্যাকাউন্ট যাচাই করুন">
-                    Verify your account
-                </h2>
-            </div>
-
-            <p class="otp-description" id="otpDescription">
-                Enter the verification code sent to your contact.
+            <p data-en="Join Civic Fix and help report local problems, follow their progress, and make your neighbourhood safer and cleaner."
+                data-bn="Civic Fix-এ যোগ দিন। এলাকার সমস্যা জানান, সমাধানের অগ্রগতি দেখুন এবং আপনার এলাকাকে আরও নিরাপদ ও পরিচ্ছন্ন করতে সাহায্য করুন।">
+                Join Civic Fix and help report local problems, follow their progress, and make your neighbourhood safer
+                and cleaner.
             </p>
 
-            <div id="otpMessage" class="form-message" role="alert"></div>
-
-            <form id="otpForm">
-                <div class="form-group">
-                    <label for="otp" data-en="Verification code" data-bn="যাচাইকরণ কোড">
-                        Verification code
-                    </label>
-
-                    <input type="text" id="otp" name="otp"
-                           placeholder="Enter 6-digit OTP"
-                           inputmode="numeric" pattern="[0-9]{6}"
-                           maxlength="6" required>
+            <div class="info-points">
+                <div class="info-point">
+                    <span class="info-icon">✓</span>
+                    <span data-en="Report community problems" data-bn="এলাকার সমস্যা জানান">Report community
+                        problems</span>
                 </div>
 
-                <button type="submit" class="primary-button" id="verifyButton"
-                        data-en="Verify & Continue" data-bn="যাচাই করে চালিয়ে যান">
-                    Verify & Continue
+                <div class="info-point">
+                    <span class="info-icon">✓</span>
+                    <span data-en="Track your submitted reports" data-bn="আপনার জমা দেওয়া রিপোর্টের অগ্রগতি দেখুন">Track
+                        your submitted reports</span>
+                </div>
+
+                <div class="info-point">
+                    <span class="info-icon">✓</span>
+                    <span data-en="Help build a better Bangladesh" data-bn="একটি উন্নত বাংলাদেশ গড়তে সাহায্য করুন">Help
+                        build a better Bangladesh</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="register-form-area">
+
+            <!-- REGISTRATION VIEW -->
+            <div id="registrationView">
+
+                <div class="form-heading">
+                    <h2 data-en="Create your account" data-bn="আপনার অ্যাকাউন্ট তৈরি করুন">
+                        Create your account
+                    </h2>
+                    <p data-en="Register to become a Civic Fix citizen."
+                        data-bn="Civic Fix-এর নাগরিক হিসেবে নিবন্ধন করুন।">
+                        Register to become a Civic Fix citizen.
+                    </p>
+                </div>
+
+                <div id="registerMessage" class="form-message" role="alert"></div>
+
+                <button type="button" class="google-button" id="googleRegister">
+                    <span class="google-g">G</span>
+                    <span data-en="Continue with Google" data-bn="Google দিয়ে চালিয়ে যান">
+                        Continue with Google
+                    </span>
                 </button>
-            </form>
 
-            <button type="button" class="back-button" id="resendOtp"
-                    data-en="Resend OTP" data-bn="আবার OTP পাঠান">
-                Resend OTP
-            </button>
+                <div class="separator">
+                    <span data-en="OR REGISTER WITH" data-bn="অথবা নিবন্ধন করুন">OR REGISTER WITH</span>
+                </div>
 
-            <button type="button" class="back-button" id="backToRegister"
-                    data-en="Back to registration" data-bn="নিবন্ধনে ফিরে যান">
-                Back to registration
-            </button>
-        </div>
+                <div class="method-tabs">
+                    <button type="button" class="method-tab active" id="emailTab" data-en="Email"
+                        data-bn="ইমেইল">Email</button>
 
-    </section>
-</main>
+                    <button type="button" class="method-tab" id="phoneTab" data-en="Phone (+880)"
+                        data-bn="ফোন (+880)">Phone (+880)</button>
+                </div>
 
-<script>
-    /*
-      BACKEND ENDPOINTS REQUIRED:
+                <form id="registerForm">
 
-      POST /api/auth/register
-      POST /api/auth/verify-otp
-      POST /api/auth/resend-otp
-      GET  /api/auth/pending-registration
-      GET  /auth/google
+                    <div class="form-group">
+                        <label for="fullName" data-en="Full name" data-bn="পুরো নাম">Full name</label>
+                        <input type="text" id="fullName" name="fullName" placeholder="Enter your full name" required
+                            maxlength="100">
+                    </div>
 
-      These routes must be implemented in server.js / backend.
-    */
+                    <div class="form-group" id="emailGroup">
+                        <label for="email" data-en="Email address" data-bn="ইমেইল ঠিকানা">Email address</label>
+                        <input type="email" id="email" name="email" placeholder="example@gmail.com"
+                            autocomplete="email">
+                    </div>
 
-    const registrationView = document.getElementById("registrationView");
-    const otpView = document.getElementById("otpView");
+                    <div class="form-group hidden" id="phoneGroup">
+                        <label for="phone" data-en="Bangladesh mobile number" data-bn="বাংলাদেশি মোবাইল নম্বর">
+                            Bangladesh mobile number
+                        </label>
 
-    const registerForm = document.getElementById("registerForm");
-    const otpForm = document.getElementById("otpForm");
+                        <div class="phone-input">
+                            <span class="phone-prefix">+880</span>
+                            <input type="tel" id="phone" name="phone" placeholder="1XXXXXXXXX" inputmode="numeric"
+                                maxlength="10" autocomplete="tel-national">
+                        </div>
 
-    const registerMessage = document.getElementById("registerMessage");
-    const otpMessage = document.getElementById("otpMessage");
+                        <small class="password-note" data-en="Enter 10 digits after +880. Example: 1712345678"
+                            data-bn="+৮৮০-এর পর ১০টি সংখ্যা লিখুন। উদাহরণ: 1712345678">
+                            Enter 10 digits after +880. Example: 1712345678
+                        </small>
+                    </div>
 
-    const emailTab = document.getElementById("emailTab");
-    const phoneTab = document.getElementById("phoneTab");
+                    <div class="form-group">
+                        <label for="password" data-en="Password" data-bn="পাসওয়ার্ড">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Create a password"
+                            minlength="8" autocomplete="new-password" required>
+                            <p id="passwordError" class="error-message"></p>
 
-    const emailGroup = document.getElementById("emailGroup");
-    const phoneGroup = document.getElementById("phoneGroup");
+                        <small class="password-note" data-en="Password must contain at least 8 characters."
+                            data-bn="পাসওয়ার্ডে কমপক্ষে ৮টি অক্ষর থাকতে হবে।">
+                            Password must contain at least 8 characters.
+                        </small>
+                    </div>
 
-    let registrationMethod = "email";
-    let currentVerificationMethod = "email";
+                    <div class="form-group">
+                        <label for="confirmPassword" data-en="Confirm password" data-bn="পাসওয়ার্ড নিশ্চিত করুন">
+                            Confirm password
+                        </label>
+                        <input type="password" id="confirmPassword" name="confirmPassword"
+                            placeholder="Enter your password again" minlength="8" autocomplete="new-password" required>
+                    </div>
 
-    function showMessage(element, message, type) {
-        element.textContent = message;
-        element.className = "form-message " + type;
-    }
+                    <button type="submit" class="primary-button" id="registerButton" data-en="Create Account"
+                        data-bn="অ্যাকাউন্ট তৈরি করুন">
+                        Create Account
+                    </button>
+                </form>
 
-    function clearMessage(element) {
-        element.textContent = "";
-        element.className = "form-message";
-    }
+                <div class="login-link">
+                    <span data-en="Already have an account?" data-bn="আগেই অ্যাকাউন্ট আছে?">
+                        Already have an account?
+                    </span>
+                    <a href="login.html" data-en="Login" data-bn="লগইন">Login</a>
+                </div>
+            </div>
 
-    function setMethod(method) {
-        registrationMethod = method;
+            <!-- OTP VERIFICATION VIEW -->
+            <div id="otpView" class="hidden">
 
-        clearMessage(registerMessage);
+                <div class="form-heading">
+                    <h2 data-en="Verify your account" data-bn="আপনার অ্যাকাউন্ট যাচাই করুন">
+                        Verify your account
+                    </h2>
+                </div>
 
-        const isEmail = method === "email";
+                <p class="otp-description" id="otpDescription">
+                    Enter the verification code sent to your contact.
+                </p>
 
-        emailGroup.classList.toggle("hidden", !isEmail);
-        phoneGroup.classList.toggle("hidden", isEmail);
+                <div id="otpMessage" class="form-message" role="alert"></div>
 
-        document.getElementById("email").required = isEmail;
-        document.getElementById("phone").required = !isEmail;
+                <form id="otpForm">
+                    <div class="form-group">
+                        <label for="otp" data-en="Verification code" data-bn="যাচাইকরণ কোড">
+                            Verification code
+                        </label>
 
-        emailTab.classList.toggle("active", isEmail);
-        phoneTab.classList.toggle("active", !isEmail);
-    }
+                        <input type="text" id="otp" name="otp" placeholder="Enter 6-digit OTP" inputmode="numeric"
+                            pattern="[0-9]{6}" maxlength="6" required>
+                    </div>
 
-    emailTab.addEventListener("click", () => setMethod("email"));
-    phoneTab.addEventListener("click", () => setMethod("phone"));
+                    <button type="submit" class="primary-button" id="verifyButton" data-en="Verify & Continue"
+                        data-bn="যাচাই করে চালিয়ে যান">
+                        Verify & Continue
+                    </button>
+                </form>
 
-    function showOtpScreen(method, destination) {
-        currentVerificationMethod = method;
+                <button type="button" class="back-button" id="resendOtp" data-en="Resend OTP" data-bn="আবার OTP পাঠান">
+                    Resend OTP
+                </button>
 
-        registrationView.classList.add("hidden");
-        otpView.classList.remove("hidden");
+                <button type="button" class="back-button" id="backToRegister" data-en="Back to registration"
+                    data-bn="নিবন্ধনে ফিরে যান">
+                    Back to registration
+                </button>
+            </div>
 
-        const destinationText = destination || "your registered contact";
+        </section>
+    </main>
 
-        document.getElementById("otpDescription").textContent =
-            method === "phone"
-                ? "Enter the 6-digit SMS verification code sent to " + destinationText + "."
-                : "Enter the 6-digit verification code sent to " + destinationText + ". Check your inbox and spam folder.";
+    <script>
 
-        clearMessage(otpMessage);
-        document.getElementById("otp").value = "";
-    }
+        const registrationView = document.getElementById("registrationView");
+        const otpView = document.getElementById("otpView");
 
-    function showRegistrationScreen() {
-        otpView.classList.add("hidden");
-        registrationView.classList.remove("hidden");
-        clearMessage(otpMessage);
-    }
+        const registerForm = document.getElementById("registerForm");
+        const otpForm = document.getElementById("otpForm");
 
-    // CREATE ACCOUNT
-    registerForm.addEventListener("submit", async function(event) {
-        event.preventDefault();
-        clearMessage(registerMessage);
+        const registerMessage = document.getElementById("registerMessage");
+        const otpMessage = document.getElementById("otpMessage");
 
-        const fullName = document.getElementById("fullName").value.trim();
-        const password = document.getElementById("password").value;
-        const confirmPassword = document.getElementById("confirmPassword").value;
+        const emailTab = document.getElementById("emailTab");
+        const phoneTab = document.getElementById("phoneTab");
 
-        if (password.length < 8) {
-            showMessage(registerMessage,
-                "Password must be at least 8 characters long.", "error");
-            return;
-        }
+        const emailGroup = document.getElementById("emailGroup");
+        const phoneGroup = document.getElementById("phoneGroup");
 
-        if (password !== confirmPassword) {
-            showMessage(registerMessage,
-                "The passwords do not match.", "error");
-            return;
-        }
+        const registerButton = document.getElementById("registerButton");
+        const verifyButton = document.getElementById("verifyButton");
+        const resendButton = document.getElementById("resendOtp");
 
-        let contact = {};
+        let registrationMethod = "email";
+        let currentLanguage = localStorage.getItem("civicFixLanguage") || "en";
 
-        if (registrationMethod === "email") {
-            const email = document.getElementById("email").value.trim();
-
-            if (!email) {
-                showMessage(registerMessage, "Please enter your email address.", "error");
-                return;
+        const messages = {
+            en: {
+                passwordShort: "Password must contain at least 8 characters.",
+                passwordMismatch: "The passwords do not match.",
+                invalidEmail: "Please enter a valid email address.",
+                invalidPhone: "Enter a valid Bangladesh mobile number.",
+                emailOnly: "Email registration is available now. Phone registration is coming soon.",
+                registerFailed: "Registration failed.",
+                verifyFailed: "OTP verification failed.",
+                connectionError: "Could not connect to the server.",
+                invalidOtp: "Please enter a valid 6-digit OTP.",
+                registerLoading: "Please wait...",
+                verifyLoading: "Verifying...",
+                register: "Create Account",
+                verify: "Verify & Continue",
+                resendSuccess: "A new OTP has been sent.",
+                googleSoon: "Google registration is coming soon.",
+                emailOtp: "Enter the 6-digit verification code sent to",
+                checkInbox: "Check your inbox and spam folder.",
+                otpSent: "OTP sent successfully."
+            },
+            bn: {
+                passwordShort: "পাসওয়ার্ডে কমপক্ষে ৮টি অক্ষর থাকতে হবে।",
+                passwordMismatch: "পাসওয়ার্ড দুটি মিলছে না।",
+                invalidEmail: "সঠিক ইমেইল ঠিকানা লিখুন।",
+                invalidPhone: "সঠিক বাংলাদেশি মোবাইল নম্বর লিখুন।",
+                emailOnly: "ইমেইল নিবন্ধন এখন চালু আছে। ফোন নিবন্ধন শীঘ্রই আসছে।",
+                registerFailed: "নিবন্ধন সম্পন্ন হয়নি।",
+                verifyFailed: "OTP যাচাই করা যায়নি।",
+                connectionError: "সার্ভারের সাথে সংযোগ করা যায়নি।",
+                invalidOtp: "৬ সংখ্যার সঠিক OTP লিখুন।",
+                registerLoading: "অপেক্ষা করুন...",
+                verifyLoading: "যাচাই করা হচ্ছে...",
+                register: "অ্যাকাউন্ট তৈরি করুন",
+                verify: "যাচাই করে চালিয়ে যান",
+                resendSuccess: "নতুন OTP পাঠানো হয়েছে।",
+                googleSoon: "Google নিবন্ধন শীঘ্রই চালু হবে।",
+                emailOtp: "আপনার ইমেইলে পাঠানো ৬ সংখ্যার কোডটি লিখুন:",
+                checkInbox: "আপনার Inbox এবং Spam ফোল্ডার দেখুন।",
+                otpSent: "OTP সফলভাবে পাঠানো হয়েছে।"
             }
+        };
 
-            contact = { email };
-        } else {
-            const phone = document.getElementById("phone").value.trim();
-
-            if (!/^1[3-9][0-9]{8}$/.test(phone)) {
-                showMessage(registerMessage,
-                    "Enter a valid Bangladesh mobile number with 10 digits after +880.",
-                    "error");
-                return;
-            }
-
-            contact = { phone: "+880" + phone };
+        function t(key) {
+            return messages[currentLanguage][key] || messages.en[key] || key;
         }
 
-        const button = document.getElementById("registerButton");
-        button.disabled = true;
-        button.textContent = "Please wait...";
+        function showMessage(element, message, type) {
+            element.textContent = message;
+            element.className = "form-message " + type;
+        }
 
-        try {
-            const response = await fetch("/api/auth/register", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    fullName,
-                    password,
-                    method: registrationMethod,
-                    ...contact
-                })
+        function clearMessage(element) {
+            element.textContent = "";
+            element.className = "form-message";
+        }
+
+        // EMAIL / PHONE TABS
+        function setMethod(method) {
+            registrationMethod = method;
+
+            const isEmail = method === "email";
+
+            emailGroup.classList.toggle("hidden", !isEmail);
+            phoneGroup.classList.toggle("hidden", isEmail);
+
+            document.getElementById("email").required = isEmail;
+            document.getElementById("phone").required = !isEmail;
+
+            emailTab.classList.toggle("active", isEmail);
+            phoneTab.classList.toggle("active", !isEmail);
+
+            clearMessage(registerMessage);
+        }
+
+        emailTab.addEventListener("click", () => setMethod("email"));
+        phoneTab.addEventListener("click", () => setMethod("phone"));
+
+        // LANGUAGE
+        function setLanguage(language) {
+            currentLanguage = language;
+            document.documentElement.lang = language;
+
+            document.querySelectorAll("[data-en][data-bn]").forEach(element => {
+                element.textContent =
+                    language === "bn" ? element.dataset.bn : element.dataset.en;
             });
 
-            const data = await response.json();
+            const placeholders = {
+                fullName: {
+                    en: "Enter your full name",
+                    bn: "আপনার পুরো নাম লিখুন"
+                },
+                email: {
+                    en: "example@gmail.com",
+                    bn: "example@gmail.com"
+                },
+                phone: {
+                    en: "1XXXXXXXXX",
+                    bn: "1XXXXXXXXX"
+                },
+                password: {
+                    en: "Create a password",
+                    bn: "একটি পাসওয়ার্ড তৈরি করুন"
+                },
+                confirmPassword: {
+                    en: "Enter your password again",
+                    bn: "আবার পাসওয়ার্ড লিখুন"
+                },
+                otp: {
+                    en: "Enter 6-digit OTP",
+                    bn: "৬ সংখ্যার OTP লিখুন"
+                }
+            };
 
-            if (!response.ok) {
-                throw new Error(data.message || "Registration failed.");
-            }
-
-            showOtpScreen(
-                registrationMethod,
-                data.destination || contact.email || contact.phone
-            );
-
-        } catch (error) {
-            showMessage(registerMessage,
-                error.message || "Could not connect to the server.", "error");
-        } finally {
-            button.disabled = false;
-            button.textContent = "Create Account";
-        }
-    });
-
-    // VERIFY OTP
-    otpForm.addEventListener("submit", async function(event) {
-        event.preventDefault();
-        clearMessage(otpMessage);
-
-        const otp = document.getElementById("otp").value.trim();
-
-        if (!/^[0-9]{6}$/.test(otp)) {
-            showMessage(otpMessage, "Please enter a valid 6-digit OTP.", "error");
-            return;
-        }
-
-        const button = document.getElementById("verifyButton");
-        button.disabled = true;
-        button.textContent = "Verifying...";
-
-        try {
-            const response = await fetch("/api/auth/verify-otp", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    otp,
-                    method: currentVerificationMethod
-                })
+            Object.keys(placeholders).forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.placeholder = placeholders[id][language];
+                }
             });
 
-            const data = await response.json();
+            document.getElementById("languageToggle").textContent =
+                language === "en" ? "বাংলা" : "English";
 
-            if (!response.ok) {
-                throw new Error(data.message || "OTP verification failed.");
-            }
-
-            // The backend should create the authenticated session here.
-            window.location.href = data.redirect || "citizen.html";
-
-        } catch (error) {
-            showMessage(otpMessage,
-                error.message || "Could not verify the OTP.", "error");
-        } finally {
-            button.disabled = false;
-            button.textContent = "Verify & Continue";
-        }
-    });
-
-    // RESEND OTP
-    document.getElementById("resendOtp").addEventListener("click", async function() {
-        clearMessage(otpMessage);
-
-        try {
-            const response = await fetch("/api/auth/resend-otp", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ method: currentVerificationMethod })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || "Could not resend OTP.");
-            }
-
-            showMessage(otpMessage,
-                data.message || "A new OTP has been sent.", "success");
-
-        } catch (error) {
-            showMessage(otpMessage, error.message, "error");
-        }
-    });
-
-    document.getElementById("backToRegister").addEventListener("click", function() {
-        showRegistrationScreen();
-    });
-
-    // GOOGLE REGISTRATION
-    document.getElementById("googleRegister").addEventListener("click", function() {
-        // The backend must handle Google OAuth, then send an email OTP
-        // and redirect back to this page with ?step=verify&method=google.
-        window.location.href = "/auth/google";
-    });
-
-    // GOOGLE OAUTH RETURN
-    async function checkGoogleVerification() {
-        const params = new URLSearchParams(window.location.search);
-
-        if (params.get("step") !== "verify" ||
-            params.get("method") !== "google") {
-            return;
+            localStorage.setItem("civicFixLanguage", language);
         }
 
-        try {
-            const response = await fetch("/api/auth/pending-registration", {
-                credentials: "include"
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || "Could not load Google registration.");
-            }
-
-            showOtpScreen("google", data.email || "your Google email");
-
-        } catch (error) {
-            showRegistrationScreen();
-            showMessage(registerMessage, error.message, "error");
-        }
-    }
-
-    // ENGLISH / BANGLA
-    const languageToggle = document.getElementById("languageToggle");
-
-    function setLanguage(language) {
-        document.documentElement.lang = language;
-
-        document.querySelectorAll("[data-en][data-bn]").forEach(element => {
-            element.textContent =
-                language === "bn" ? element.dataset.bn : element.dataset.en;
+        document.getElementById("languageToggle").addEventListener("click", () => {
+            setLanguage(currentLanguage === "en" ? "bn" : "en");
         });
 
-        languageToggle.textContent = language === "en" ? "বাংলা" : "English";
-        localStorage.setItem("civicFixLanguage", language);
-    }
+        // SHOW OTP SCREEN
+        function showOtpScreen(destination) {
+            registrationView.classList.add("hidden");
+            otpView.classList.remove("hidden");
 
-    languageToggle.addEventListener("click", function() {
-        const current = localStorage.getItem("civicFixLanguage") || "en";
-        setLanguage(current === "en" ? "bn" : "en");
-    });
+            document.getElementById("otpDescription").textContent =
+                `${t("emailOtp")} ${destination}. ${t("checkInbox")}`;
 
-    setLanguage(localStorage.getItem("civicFixLanguage") || "en");
-    checkGoogleVerification();
-</script>
+            document.getElementById("otp").value = "";
+            clearMessage(otpMessage);
+        }
+
+        function showRegistrationScreen() {
+            otpView.classList.add("hidden");
+            registrationView.classList.remove("hidden");
+            clearMessage(otpMessage);
+        }
+
+        // REGISTER ACCOUNT
+        registerForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            clearMessage(registerMessage);
+
+            if (registrationMethod !== "email") {
+                showMessage(registerMessage, t("emailOnly"), "error");
+                return;
+            }
+
+            const fullName = document.getElementById("fullName").value.trim();
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+            const confirmPassword = document.getElementById("confirmPassword").value;
+
+            if (password.length < 8) {
+                showMessage(registerMessage, t("passwordShort"), "error");
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showMessage(registerMessage, t("passwordMismatch"), "error");
+                return;
+            }
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showMessage(registerMessage, t("invalidEmail"), "error");
+                return;
+            }
+
+            registerButton.disabled = true;
+            registerButton.textContent = t("registerLoading");
+
+            try {
+                const response = await fetch("/api/auth/register", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        fullName,
+                        email,
+                        password,
+                        method: "email"
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || t("registerFailed"));
+                }
+
+                showOtpScreen(data.destination || email);
+
+                showMessage(otpMessage, data.message || t("otpSent"), "success");
+
+            } catch (error) {
+                showMessage(
+                    registerMessage,
+                    error.message || t("connectionError"),
+                    "error"
+                );
+            } finally {
+                registerButton.disabled = false;
+                registerButton.textContent = t("register");
+            }
+        });
+
+        // VERIFY OTP
+        otpForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            clearMessage(otpMessage);
+
+            const otp = document.getElementById("otp").value.trim();
+
+            if (!/^[0-9]{6}$/.test(otp)) {
+                showMessage(otpMessage, t("invalidOtp"), "error");
+                return;
+            }
+
+            verifyButton.disabled = true;
+            verifyButton.textContent = t("verifyLoading");
+
+            try {
+                const response = await fetch("/api/auth/verify-otp", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        otp,
+                        method: "email"
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || t("verifyFailed"));
+                }
+
+                window.location.href = data.redirect || "citizen.html";
+
+            } catch (error) {
+                showMessage(
+                    otpMessage,
+                    error.message || t("connectionError"),
+                    "error"
+                );
+            } finally {
+                verifyButton.disabled = false;
+                verifyButton.textContent = t("verify");
+            }
+        });
+
+        // RESEND OTP
+        resendButton.addEventListener("click", async function () {
+            clearMessage(otpMessage);
+
+            resendButton.disabled = true;
+
+            try {
+                const response = await fetch("/api/auth/resend-otp", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        method: "email"
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || "Could not resend OTP.");
+                }
+
+                showMessage(
+                    otpMessage,
+                    data.message || t("resendSuccess"),
+                    "success"
+                );
+
+            } catch (error) {
+                showMessage(otpMessage, error.message, "error");
+            } finally {
+                resendButton.disabled = false;
+            }
+        });
+
+        // BACK TO REGISTRATION
+        document.getElementById("backToRegister").addEventListener("click", function () {
+            showRegistrationScreen();
+        });
+
+        // GOOGLE REGISTRATION
+        document.getElementById("googleRegister").addEventListener("click", function () {
+            showMessage(registerMessage, t("googleSoon"), "error");
+        });
+
+        // INITIALIZE
+        setLanguage(currentLanguage);
+        setMethod("email");
+
+    </script>
 
 </body>
+
 </html>
