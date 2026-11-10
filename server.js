@@ -1427,6 +1427,8 @@ app.get(
 
                         full_name,
 
+                        username,
+
                         email,
 
                         phone,
@@ -1519,6 +1521,7 @@ app.put(
             const rawEmail = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
             const rawPhone = typeof req.body.phone === "string" ? req.body.phone.trim() : "";
             const city = typeof req.body.city === "string" ? req.body.city.trim() : "";
+            const username = typeof req.body.username === "string" ? req.body.username.trim().toLowerCase() : "";
             const currentPassword = typeof req.body.currentPassword === "string" ? req.body.currentPassword : "";
             const newPassword = typeof req.body.newPassword === "string" ? req.body.newPassword : "";
 
@@ -1533,6 +1536,10 @@ app.put(
             if (city.length > 120) {
                 if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
                 return res.status(400).json({ success: false, message: "City or area must be 120 characters or fewer." });
+            }
+            if (!/^[a-z0-9_]{3,32}$/.test(username)) {
+                if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                return res.status(400).json({ success: false, message: "Username must be 3–32 characters using letters, numbers or underscores." });
             }
 
             let phone = null;
@@ -1556,7 +1563,7 @@ app.put(
             }
 
             const [currentRows] = await db.query(
-                "SELECT password_hash, auth_provider, profile_image, email, phone, email_verified, phone_verified FROM users WHERE user_id = ? LIMIT 1",
+                "SELECT password_hash, auth_provider, profile_image, email, phone, username, email_verified, phone_verified FROM users WHERE user_id = ? LIMIT 1",
                 [userId]
             );
             if (!currentRows.length) {
@@ -1599,6 +1606,17 @@ app.put(
                 }
             }
 
+            if (username !== String(current.username || "").toLowerCase()) {
+                const [duplicates] = await db.query(
+                    "SELECT user_id FROM users WHERE username = ? AND user_id <> ? LIMIT 1",
+                    [username, userId]
+                );
+                if (duplicates.length) {
+                    if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+                    return res.status(409).json({ success: false, message: "That username is already taken." });
+                }
+            }
+
             const passwordHash = newPassword
                 ? await bcrypt.hash(newPassword, 12)
                 : current.password_hash;
@@ -1606,12 +1624,13 @@ app.put(
 
             await db.query(
                 `UPDATE users
-                 SET email_verified = ?, phone_verified = ?, full_name = ?, email = ?, phone = ?, city = ?, profile_image = ?, password_hash = ?
+                 SET email_verified = ?, phone_verified = ?, full_name = ?, username = ?, email = ?, phone = ?, city = ?, profile_image = ?, password_hash = ?
                  WHERE user_id = ?`,
                 [
                     emailChanged ? 0 : current.email_verified,
                     phoneChanged ? 0 : current.phone_verified,
                     fullName,
+                    username,
                     rawEmail || null,
                     phone,
                     city || null,
@@ -1639,6 +1658,7 @@ app.put(
                 profile: {
                     user_id: userId,
                     full_name: fullName,
+                    username,
                     email: rawEmail || null,
                     phone,
                     city: city || null,
@@ -1783,8 +1803,8 @@ app.post(
                 return reject(400, "Enter a title of up to 200 characters.");
             if (typeof category !== "string" || !category.trim() || category.trim().length > 100)
                 return reject(400, "Select a valid issue category.");
-            if (typeof description !== "string" || description.trim().length < 20 || description.trim().length > 2000)
-                return reject(400, "The description must be between 20 and 2000 characters.");
+            if (typeof description !== "string" || !description.trim() || description.trim().length > 2000)
+                return reject(400, "Enter a description of up to 2000 characters.");
             if (typeof location !== "string" || !location.trim() || location.trim().length > 255)
                 return reject(400, "Enter an issue location of up to 255 characters.");
 
@@ -1864,6 +1884,39 @@ app.post(
         }
     }
 );
+
+app.delete("/api/citizen/reports/:reportId", requireRole("citizen"), async (req, res) => {
+    const reportId = Number(req.params.reportId);
+    if (!Number.isSafeInteger(reportId) || reportId < 1) return res.status(400).json({ success: false, message: "Invalid report." });
+    let connection;
+    try {
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+        const ownerId = getLoggedInUserId(req);
+        const [reports] = await connection.query("SELECT report_id, image_path FROM reports WHERE report_id = ? AND user_id = ? FOR UPDATE", [reportId, ownerId]);
+        if (!reports.length) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: "Report not found." });
+        }
+        const [images] = await connection.query("SELECT image_path FROM report_images WHERE report_id = ?", [reportId]);
+        await connection.query("DELETE FROM ai_analyses WHERE report_id = ?", [reportId]);
+        await connection.query("DELETE FROM report_comments WHERE report_id = ?", [reportId]);
+        await connection.query("DELETE FROM report_images WHERE report_id = ?", [reportId]);
+        await connection.query("DELETE FROM reports WHERE report_id = ? AND user_id = ?", [reportId, ownerId]);
+        await connection.commit();
+        for (const image of [...images, { image_path: reports[0].image_path }]) {
+            const relative = String(image.image_path || "").replace(/^\/+/, "");
+            if (!relative.startsWith("uploads/reports/")) continue;
+            const absolute = path.resolve(__dirname, "public", relative);
+            if (absolute.startsWith(path.resolve(__dirname, "public", "uploads", "reports") + path.sep) && fs.existsSync(absolute)) fs.unlinkSync(absolute);
+        }
+        return res.json({ success: true, message: "Report deleted." });
+    } catch (error) {
+        if (connection) await connection.rollback().catch(() => {});
+        console.error("Citizen report deletion error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to delete this report." });
+    } finally { if (connection) connection.release(); }
+});
 
 
 // 21. GET CITIZEN DASHBOARD STATISTICS
@@ -2105,6 +2158,124 @@ app.get(
     }
 );
 
+// Direct messages and public profile discovery for signed-in users.
+app.get("/api/messages/users", requireLogin, async (req, res) => {
+    const search = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 80) : "";
+    if (search.length < 2) return res.json({ success: true, users: [] });
+    try {
+        const pattern = `%${search.replace(/[\\%_]/g, "\\$&")}%`;
+        const [users] = await db.query(
+            `SELECT user_id, full_name, username, role, profile_image
+             FROM users WHERE user_id <> ? AND account_status = 'active'
+             AND (full_name LIKE ? OR username LIKE ?)
+             ORDER BY full_name ASC LIMIT 20`,
+            [getLoggedInUserId(req), pattern, pattern]
+        );
+        return res.json({ success: true, users });
+    } catch (error) {
+        console.error("Message user search error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to search users." });
+    }
+});
+
+app.get("/api/users/:userId/profile", requireLogin, async (req, res) => {
+    const userId = Number(req.params.userId);
+    if (!Number.isSafeInteger(userId) || userId < 1) return res.status(400).json({ success: false, message: "Invalid user." });
+    try {
+        const [users] = await db.query(
+            `SELECT user_id, full_name, username, role, city, profile_image
+             FROM users WHERE user_id = ? AND account_status = 'active' LIMIT 1`, [userId]
+        );
+        if (!users.length) return res.status(404).json({ success: false, message: "User not found." });
+        const [stats] = await db.query("SELECT COUNT(*) AS report_count FROM reports WHERE user_id = ?", [userId]);
+        const [reports] = await db.query(
+            `SELECT report_id, title, category, location, status, created_at
+             FROM reports WHERE user_id = ? ORDER BY created_at DESC LIMIT 20`, [userId]
+        );
+        const [pointRows] = await db.query("SELECT COUNT(*) AS points FROM reports WHERE user_id = ? AND status IN ('in_progress', 'resolved')", [userId]);
+        return res.json({ success: true, profile: { ...users[0], report_count: Number(stats[0]?.report_count || 0), points: Number(pointRows[0]?.points || 0) * 10, reports } });
+    } catch (error) {
+        console.error("Public profile error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to load this profile." });
+    }
+});
+
+app.get("/api/messages/conversations", requireLogin, async (req, res) => {
+    const userId = getLoggedInUserId(req);
+    try {
+        const [rows] = await db.query(
+            `SELECT m.message_id, m.sender_id, m.recipient_id, m.message_text, m.created_at,
+                    CASE WHEN m.sender_id = ? THEN m.recipient_id ELSE m.sender_id END AS other_user_id,
+                    CASE WHEN m.sender_id = ? THEN m.recipient_id ELSE m.sender_id END AS user_id,
+                    u.full_name, u.username, u.role, u.profile_image
+             FROM civic_messages m
+             JOIN users u ON u.user_id = CASE WHEN m.sender_id = ? THEN m.recipient_id ELSE m.sender_id END
+             WHERE m.sender_id = ? OR m.recipient_id = ?
+             ORDER BY m.message_id DESC LIMIT 500`,
+            [userId, userId, userId, userId, userId]
+        );
+        const latest = new Map();
+        for (const row of rows) if (!latest.has(Number(row.other_user_id))) latest.set(Number(row.other_user_id), row);
+        return res.json({ success: true, conversations: [...latest.values()] });
+    } catch (error) {
+        console.error("Conversation list error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to load conversations." });
+    }
+});
+
+app.get("/api/messages/conversations/:userId", requireLogin, async (req, res) => {
+    const userId = getLoggedInUserId(req);
+    const otherId = Number(req.params.userId);
+    if (!Number.isSafeInteger(otherId) || otherId < 1 || otherId === Number(userId)) return res.status(400).json({ success: false, message: "Invalid conversation." });
+    try {
+        const [users] = await db.query("SELECT user_id FROM users WHERE user_id = ? AND account_status = 'active' LIMIT 1", [otherId]);
+        if (!users.length) return res.status(404).json({ success: false, message: "User not found." });
+        const [messages] = await db.query(
+            `SELECT message_id, sender_id, recipient_id, message_text, created_at FROM civic_messages
+             WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)
+             ORDER BY message_id DESC LIMIT 100`, [userId, otherId, otherId, userId]
+        );
+        return res.json({ success: true, messages: messages.reverse() });
+    } catch (error) {
+        console.error("Message history error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to load messages." });
+    }
+});
+
+app.post("/api/messages/conversations/:userId", requireLogin, async (req, res) => {
+    const senderId = getLoggedInUserId(req);
+    const recipientId = Number(req.params.userId);
+    const message = typeof req.body.message === "string" ? req.body.message.trim() : "";
+    if (!Number.isSafeInteger(recipientId) || recipientId < 1 || recipientId === Number(senderId)) return res.status(400).json({ success: false, message: "Invalid recipient." });
+    if (!message || message.length > 2000) return res.status(400).json({ success: false, message: "Messages must contain 1–2000 characters." });
+    try {
+        const [users] = await db.query("SELECT user_id FROM users WHERE user_id = ? AND account_status = 'active' LIMIT 1", [recipientId]);
+        if (!users.length) return res.status(404).json({ success: false, message: "User not found." });
+        const [result] = await db.query("INSERT INTO civic_messages (sender_id, recipient_id, message_text) VALUES (?, ?, ?)", [senderId, recipientId, message]);
+        const [rows] = await db.query("SELECT message_id, sender_id, recipient_id, message_text, created_at FROM civic_messages WHERE message_id = ?", [result.insertId]);
+        return res.status(201).json({ success: true, message: rows[0] });
+    } catch (error) {
+        console.error("Send message error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to send this message." });
+    }
+});
+
+app.delete("/api/messages/conversations/:userId", requireLogin, async (req, res) => {
+    const userId = Number(getLoggedInUserId(req));
+    const otherId = Number(req.params.userId);
+    if (!Number.isSafeInteger(otherId) || otherId < 1 || otherId === userId) return res.status(400).json({ success: false, message: "Invalid conversation." });
+    try {
+        const [result] = await db.query(
+            "DELETE FROM civic_messages WHERE (sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)",
+            [userId, otherId, otherId, userId]
+        );
+        return res.json({ success: true, deleted: result.affectedRows });
+    } catch (error) {
+        console.error("Conversation deletion error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to delete this conversation." });
+    }
+});
+
 // 22. LOCAL CITIZEN NEWSFEED
 // Uses browser-provided coordinates only for this request; there is no background tracking.
 // ==========================================
@@ -2127,6 +2298,10 @@ app.get(
             const [reports] = await db.query(`
                 SELECT
                     r.report_id,
+                    u.user_id,
+                    u.full_name AS author_name,
+                    u.username AS author_username,
+                    u.profile_image AS author_profile_image,
                     r.title,
                     r.description,
                     r.category,
@@ -2250,6 +2425,7 @@ app.get(
                 SELECT
                     u.user_id,
                     u.full_name,
+                    u.profile_image,
                     COUNT(r.report_id) AS legitimate_reports
                 FROM users u
                 LEFT JOIN reports r
@@ -2257,7 +2433,7 @@ app.get(
                     AND r.status IN ('in_progress', 'resolved')
                 WHERE u.role = 'citizen'
                     AND u.account_status = 'active'
-                GROUP BY u.user_id, u.full_name
+                GROUP BY u.user_id, u.full_name, u.profile_image
                 ORDER BY legitimate_reports DESC, u.full_name ASC, u.user_id ASC
             `);
 
@@ -2266,6 +2442,7 @@ app.get(
                 return {
                     rank: index + 1,
                     name: row.full_name || "Citizen",
+                    profileImage: row.profile_image || null,
                     legitimateReports,
                     points: legitimateReports * 10,
                     isCurrentUser: Number(row.user_id) === Number(citizenId)
@@ -2279,7 +2456,8 @@ app.get(
                 currentUser: {
                     rank: current ? current.rank : null,
                     legitimateReports: current ? current.legitimateReports : 0,
-                    points: current ? current.points : 0
+                    points: current ? current.points : 0,
+                    profileImage: current ? current.profileImage : null
                 },
                 leaderboard
             });

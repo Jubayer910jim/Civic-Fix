@@ -31,7 +31,10 @@
 
             <a class="brand" href="citizen.html" aria-label="Civic Fix home">
                 <span class="brand-mark">
-                    <i></i><i></i><i></i><i></i>
+                    <svg viewBox="0 0 48 48" role="img" aria-label="Civic Fix logo" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 22.5 24 9l16 13.5v17a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M18 31.5 22.5 36 32 25.5" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                 </span>
 
                 <span class="brand-name">
@@ -54,6 +57,11 @@
                 <button class="nav-item active" data-section="overview">
                     <span class="nav-icon">⌂</span>
                     <span data-en="Overview" data-bn="ওভারভিউ">Overview</span>
+                </button>
+
+                <button class="nav-item" data-section="inbox">
+                    <span class="nav-icon" aria-hidden="true">✉</span>
+                    <span data-en="Inbox" data-bn="ইনবক্স">Inbox</span>
                 </button>
 
                 <button class="nav-item" data-section="new-report">
@@ -90,6 +98,7 @@
 
                     <div class="user-mini-text">
                         <strong id="citizenProfileName">Loading...</strong>
+                        <small id="citizenProfileUsername" class="mini-username"></small>
 
                         <span data-en="Citizen account" data-bn="নাগরিক অ্যাকাউন্ট">
                             Citizen account
@@ -370,6 +379,36 @@
 
                     </div>
 
+                </section>
+
+                <section class="page-section" id="section-inbox" hidden>
+                    <div class="page-title-row">
+                        <div><div class="eyebrow"><span class="eyebrow-line"></span><span>DIRECT MESSAGES</span></div>
+                            <h1 data-en="Inbox" data-bn="ইনবক্স">Inbox</h1>
+                            <p data-en="Message citizens, administrators and institutions." data-bn="নাগরিক, প্রশাসক ও প্রতিষ্ঠানের সঙ্গে বার্তা আদান-প্রদান করুন।">Message citizens, administrators and institutions.</p>
+                        </div>
+                    </div>
+                    <div class="inbox-layout panel">
+                        <aside class="inbox-sidebar">
+                            <label class="inbox-search-label" for="inboxUserSearch" data-en="Find people" data-bn="ব্যবহারকারী খুঁজুন">Find people</label>
+                            <input id="inboxUserSearch" type="search" maxlength="80" autocomplete="off" placeholder="Search name or username…">
+                            <div id="inboxSearchResults" class="inbox-people-list" aria-live="polite"></div>
+                            <h2 data-en="Conversations" data-bn="কথোপকথন">Conversations</h2>
+                            <div id="inboxConversationList" class="inbox-people-list" aria-live="polite"></div>
+                        </aside>
+                        <section class="inbox-chat" aria-label="Message conversation">
+                            <div id="inboxEmpty" class="inbox-empty" data-en="Choose someone to start a conversation." data-bn="কথোপকথন শুরু করতে কাউকে বেছে নিন।">Choose someone to start a conversation.</div>
+                            <div id="inboxActiveChat" hidden>
+                                <header id="inboxChatHeader" class="inbox-chat-header"></header>
+                                <div id="inboxMessages" class="inbox-messages" aria-live="polite"></div>
+                                <form id="inboxCompose" class="inbox-compose">
+                                    <label class="visually-hidden" for="inboxMessageInput">Write a message</label>
+                                    <textarea id="inboxMessageInput" maxlength="2000" required placeholder="Write a message…"></textarea>
+                                    <button type="submit" class="submit-button">Send</button>
+                                </form>
+                            </div>
+                        </section>
+                    </div>
                 </section>
 
                 <!-- NEW REPORT -->
@@ -757,7 +796,10 @@
                         </article>
                         <article class="leaderboard-rank-card">
                             <span data-en="Your rank" data-bn="আপনার অবস্থান">Your rank</span>
-                            <strong id="myLeaderboardRank">—</strong>
+                            <div class="leaderboard-current-rank">
+                                <span id="myLeaderboardAvatar" class="leaderboard-avatar" aria-hidden="true"></span>
+                                <strong id="myLeaderboardRank">—</strong>
+                            </div>
                             <small id="myLeaderboardReportCount">0 legitimate reports</small>
                         </article>
                     </div>
@@ -822,6 +864,9 @@
                     <label><span data-en="Full name" data-bn="পুরো নাম">Full name</span>
                         <input id="profileFullName" name="fullName" autocomplete="name" maxlength="100" required>
                     </label>
+                    <label><span data-en="Username" data-bn="ব্যবহারকারীর নাম">Username</span>
+                        <input id="profileUsername" name="username" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_]+" required>
+                    </label>
                     <label><span data-en="Phone number" data-bn="ফোন নম্বর">Phone number</span>
                         <input id="profilePhone" name="phone" type="tel" autocomplete="tel" maxlength="18" placeholder="+8801XXXXXXXXX">
                     </label>
@@ -860,6 +905,13 @@
                     </div>
                 </div>
             </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop public-profile-backdrop" id="publicProfileModal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="publicProfileName">
+        <section class="public-profile-card">
+            <button type="button" class="modal-close" id="closePublicProfile" aria-label="Close profile">×</button>
+            <div id="publicProfileContent"></div>
         </section>
     </div>
 

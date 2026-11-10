@@ -51,6 +51,9 @@ let previewObjectURLs = [];
 let profilePreviewObjectURL = null;
 let profileFocusReturn = null;
 let isSubmittingReport = false;
+let activeMessageUser = null;
+let inboxSearchTimer = null;
+let inboxRefreshTimer = null;
 
 
 /* =========================================================
@@ -124,6 +127,15 @@ function formatDate(dateValue) {
     );
 }
 
+function formatReportTime(dateValue) {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleTimeString(currentLanguage === "bn" ? "bn-BD" : "en-GB", {
+        hour: "2-digit", minute: "2-digit"
+    });
+}
+
 function getFriendlyStatus(status) {
     const value = String(status || "submitted").toLowerCase().replace(/[ -]/g, "_");
 
@@ -189,6 +201,7 @@ function normalizeReport(report) {
         priority: report.priority || "medium",
         status: getFriendlyStatus(report.status),
         date: formatDate(report.created_at || report.date),
+        time: formatReportTime(report.created_at),
         images
     };
 }
@@ -295,6 +308,7 @@ function updateProfileInterface() {
     if ($("citizenProfileName")) {
         $("citizenProfileName").textContent = fullName;
     }
+    if ($("citizenProfileUsername")) $("citizenProfileUsername").textContent = citizenProfile.username ? `@${citizenProfile.username}` : "";
 
     [$("citizenAvatarInitials"), $("citizenTopAvatar")].forEach(avatar => {
         if (!avatar) return;
@@ -449,6 +463,7 @@ function openProfileModal() {
     profileFocusReturn = document.activeElement;
     if ($("citizenAccountDropdown")) $("citizenAccountDropdown").hidden = true;
     $("profileFullName").value = citizenProfile.full_name || "";
+    $("profileUsername").value = citizenProfile.username || "";
     $("profilePhone").value = citizenProfile.phone || "";
     $("profileCity").value = citizenProfile.city || "";
     $("profileEmail").value = citizenProfile.email || "";
@@ -583,7 +598,7 @@ if ($("profileForm")) {
         }
 
         const formData = new FormData();
-        ["fullName", "phone", "city", "email", "currentPassword", "newPassword"].forEach(name => {
+        ["fullName", "username", "phone", "city", "email", "currentPassword", "newPassword"].forEach(name => {
             formData.append(name, $("profileForm").elements[name].value);
         });
         const selectedPhoto = $("profileImageFile").files[0];
@@ -656,14 +671,25 @@ function renderCitizenLeaderboard() {
     const points = $("myLeaderboardPoints");
     const rank = $("myLeaderboardRank");
     const reportCount = $("myLeaderboardReportCount");
+    const myAvatar = $("myLeaderboardAvatar");
     const locale = currentLanguage === "bn" ? "bn-BD" : "en-US";
     const numberFormat = new Intl.NumberFormat(locale);
 
     if (points) points.textContent = numberFormat.format(currentCitizenScore.points || 0);
+    if (myAvatar) {
+        myAvatar.replaceChildren();
+        if (citizenProfile.profile_image) {
+            const image = document.createElement("img");
+            image.src = citizenProfile.profile_image;
+            image.alt = "Your citizen profile photo";
+            myAvatar.appendChild(image);
+        } else {
+            myAvatar.textContent = getInitials(citizenProfile.full_name);
+        }
+    }
     if (rank) {
-        rank.textContent = currentCitizenScore.rank
-            ? `#${numberFormat.format(currentCitizenScore.rank)}`
-            : getCurrentText("—", "—");
+        const currentRank = Number(currentCitizenScore.rank);
+        rank.textContent = currentRank === 1 ? "🥇" : currentRank === 2 ? "🥈" : currentRank === 3 ? "🥉" : currentRank > 3 ? `#${numberFormat.format(currentRank)}` : getCurrentText("—", "—");
     }
     if (reportCount) {
         const count = numberFormat.format(currentCitizenScore.legitimateReports || 0);
@@ -680,9 +706,14 @@ function renderCitizenLeaderboard() {
         return;
     }
 
-    list.innerHTML = citizenLeaderboard.map(person => `
+    list.innerHTML = citizenLeaderboard.map(person => {
+        const rankLabel = person.rank === 1 ? "🥇" : person.rank === 2 ? "🥈" : person.rank === 3 ? "🥉" : `#${numberFormat.format(person.rank)}`;
+        return `
         <li class="leaderboard-item${person.isCurrentUser ? " is-current-user" : ""}">
-            <span class="leaderboard-rank">#${numberFormat.format(person.rank)}</span>
+            <span class="leaderboard-rank-group">
+                <span class="leaderboard-avatar" aria-hidden="true">${person.profileImage ? `<img src="${escapeHTML(person.profileImage)}" alt="">` : escapeHTML(getInitials(person.name))}</span>
+                <span class="leaderboard-rank" aria-label="${person.rank <= 3 ? ["", "Gold", "Silver", "Bronze"][person.rank] : `Rank ${person.rank}`}">${rankLabel}</span>
+            </span>
             <span class="leaderboard-citizen">
                 <strong>${escapeHTML(person.name)}</strong>
                 ${person.isCurrentUser ? `<small>${escapeHTML(getCurrentText("You", "আপনি"))}</small>` : ""}
@@ -696,7 +727,7 @@ function renderCitizenLeaderboard() {
                 <small>${escapeHTML(getCurrentText("points", "পয়েন্ট"))}</small>
             </span>
         </li>
-    `).join("");
+    `}).join("");
 }
 
 async function loadCitizenLeaderboard() {
@@ -803,6 +834,13 @@ function renderNewsfeed() {
                     <div class="newsfeed-report-topline">
                         <span class="status-pill ${newsfeedStatusClass(status)}">${escapeHTML(newsfeedStatusLabel(status))}</span>
                         <time datetime="${escapeHTML(isoDate)}">${escapeHTML(dateTime)}</time>
+                    </div>
+                    <div class="newsfeed-author-row">
+                        <button type="button" class="newsfeed-author-profile" data-view-user="${Number(report.user_id) || 0}" aria-label="View ${escapeHTML(report.author_name || "citizen")} profile">
+                            <span class="newsfeed-author-avatar">${report.author_profile_image ? `<img src="${escapeHTML(report.author_profile_image)}" alt="">` : escapeHTML(getInitials(report.author_name || "Citizen"))}</span>
+                            <span><strong>${escapeHTML(report.author_name || getCurrentText("Citizen", "নাগরিক"))}</strong><small>${escapeHTML(report.author_username ? `@${report.author_username}` : "")}</small></span>
+                        </button>
+                        ${Number(report.user_id) ? `<button type="button" class="newsfeed-message-link" data-message-user="${Number(report.user_id)}" data-user-name="${escapeHTML(report.author_name || "Citizen")}">${escapeHTML(getCurrentText("Message", "বার্তা"))}</button>` : ""}
                     </div>
                     <div class="newsfeed-report-heading">
                         <div><small>${escapeHTML(report.category || getCurrentText("Community report", "কমিউনিটি অভিযোগ"))}</small>
@@ -1052,6 +1090,17 @@ if ($("newsfeedStatusFilter")) $("newsfeedStatusFilter").addEventListener("chang
 
 if ($("newsfeedList")) {
     $("newsfeedList").addEventListener("click", async event => {
+        const profileButton = event.target.closest("[data-view-user]");
+        if (profileButton && Number(profileButton.dataset.viewUser)) {
+            await openPublicProfile(profileButton.dataset.viewUser);
+            return;
+        }
+        const messageButton = event.target.closest("[data-message-user]");
+        if (messageButton) {
+            navigate("inbox");
+            await openMessageConversation(Number(messageButton.dataset.messageUser), messageButton.dataset.userName);
+            return;
+        }
         const reportCard = event.target.closest(".newsfeed-report");
         if (reportCard && !event.target.closest("button, a, input, textarea, form")) {
             focusNewsfeedReport(reportCard.dataset.reportId);
@@ -1296,6 +1345,7 @@ function renderAllReports() {
                 <strong>${escapeHTML(report.title)}</strong>
                 <p>${escapeHTML(report.category)} · ${escapeHTML(report.location)}</p>
                 <p>${escapeHTML(report.id)} · ${escapeHTML(report.date)}</p>
+                ${report.time ? `<p class="citizen-report-time">${escapeHTML(report.time)}</p>` : ""}
                 ${report.description
                     ? `<p class="citizen-report-description">${escapeHTML(report.description)}</p>`
                     : ""}
@@ -1306,6 +1356,9 @@ function renderAllReports() {
                 <span class="status-pill ${getStatusClass(report.status)}">
                     ${escapeHTML(getTranslatedStatus(report.status))}
                 </span>
+                <div class="citizen-report-actions">
+                    <button type="button" class="report-delete-button" data-delete-report="${Number(report.report_id)}">Delete</button>
+                </div>
             </div>
         </article>
     `).join("");
@@ -1344,6 +1397,20 @@ async function loadCitizenReports() {
         }
     }
 }
+
+async function deleteCitizenReport(reportId) {
+    if (!window.confirm("Delete this report? This cannot be undone.")) return;
+    try {
+        await apiRequest(`${API_URL}/reports/${Number(reportId)}`, { method: "DELETE" });
+        await Promise.allSettled([loadCitizenReports(), loadCitizenStats()]);
+        showToast("Report deleted.");
+    } catch (error) { showToast(error.message || "Unable to delete report."); }
+}
+
+$("allReportsList")?.addEventListener("click", event => {
+    const remove = event.target.closest("[data-delete-report]");
+    if (remove) deleteCitizenReport(remove.dataset.deleteReport);
+});
 
 
 /* =========================================================
@@ -1407,7 +1474,8 @@ function navigate(sectionName) {
             "new-report": ["Submit a complaint", "অভিযোগ জমা দিন"],
             "my-reports": ["My reports", "আমার অভিযোগ"],
             notifications: ["Notifications", "নোটিফিকেশন"],
-            leaderboard: ["Leaderboard", "লিডারবোর্ড"]
+            leaderboard: ["Leaderboard", "লিডারবোর্ড"],
+            inbox: ["Inbox", "ইনবক্স"]
         };
 
         breadcrumb.textContent = selectedNavText
@@ -1431,6 +1499,7 @@ function navigate(sectionName) {
         loadCitizenLeaderboard();
     }
     if (sectionName === "newsfeed") loadNewsfeed();
+    if (sectionName === "inbox") loadInboxConversations();
 }
 
 // Buttons and links with data-section are handled in one place.
@@ -1706,11 +1775,12 @@ function addImageUploadStyles() {
             align-items: center;
             justify-content: center;
             gap: 8px;
-            min-height: 42px;
-            padding: 9px 15px;
+            min-height: 34px;
+            padding: 6px 10px;
             border: 1px solid var(--border-color, #d8dce5);
             border-radius: 10px;
             cursor: pointer;
+            font-size: 12px;
             font-weight: 600;
             background: var(--card-bg, #fff);
             color: inherit;
@@ -1795,30 +1865,42 @@ function addImageUploadStyles() {
         }
         .citizen-account-dropdown {
             position: absolute;
-            z-index: 50;
+            z-index: 1000;
             right: 0;
-            bottom: calc(100% + 8px);
-            width: 220px;
-            padding: 13px;
+            left: 0;
+            top: auto;
+            bottom: calc(100% + 10px);
+            box-sizing: border-box;
+            width: max-content;
+            min-width: min(220px, calc(100vw - 32px));
+            max-width: calc(100vw - 32px);
+            padding: 14px;
             border: 1px solid var(--border-color, #ddd);
             border-radius: 12px;
             background: var(--card-bg, #fff);
             box-shadow: 0 10px 30px rgba(0,0,0,.12);
+            overflow: visible;
         }
         .citizen-account-dropdown[hidden] { display: none; }
         .citizen-account-dropdown strong,
-        .citizen-account-dropdown small { display: block; overflow-wrap: anywhere; }
-        .citizen-account-dropdown small { margin: 5px 0 12px; color: var(--muted, #777); }
-        .citizen-account-dropdown button {
+        .citizen-account-dropdown small { display: block; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+        .citizen-account-dropdown small { margin: 5px 0 10px; color: var(--muted, #777); font-size: 12px; }
+        .citizen-account-dropdown #accountDropdownLogout {
+            display: flex;
+            align-items: center;
             width: 100%;
-            padding: 8px 10px;
-            border: 0;
-            border-radius: 8px;
-            cursor: pointer;
+            min-height: 42px;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border: 1px solid #f2cbc4;
+            border-radius: 9px;
+            background: #fff0ed;
+            color: #ad3934;
+            font-weight: 700;
             text-align: left;
-            background: var(--surface-soft, #f4f5f7);
-            color: inherit;
         }
+        .citizen-account-dropdown #accountDropdownLogout:hover { background: #ffe1dc; color: #8f3029; }
+        body.dark .citizen-account-dropdown #accountDropdownLogout { background: #392522; color: #ffb8ac; border-color: #624039; }
         .citizen-image-upload button:disabled { opacity: .6; cursor: not-allowed; }
         @media (max-width: 560px) {
             .citizen-image-upload { padding: 13px; }
@@ -2087,14 +2169,6 @@ async function submitComplaint(event) {
         return;
     }
 
-    if (description.length < 20) {
-        showToast(getCurrentText(
-            "Please provide at least 20 characters in the description.",
-            "বিবরণে কমপক্ষে ২০টি অক্ষর লিখুন।"
-        ));
-        return;
-    }
-
     if (description.length > 2000) {
         showToast(getCurrentText(
             "The description must not exceed 2000 characters.",
@@ -2312,6 +2386,175 @@ if ($("logoutButton")) {
 /* =========================================================
    25. INITIALIZE CITIZEN PORTAL
 ========================================================= */
+
+function userAvatarMarkup(user, sizeClass = "") {
+    const name = user.full_name || "Citizen";
+    return `<span class="inbox-avatar ${sizeClass}">${user.profile_image ? `<img src="${escapeHTML(user.profile_image)}" alt="">` : escapeHTML(getInitials(name))}</span>`;
+}
+
+async function openPublicProfile(userId) {
+    try {
+        const data = await apiRequest(`/api/users/${Number(userId)}/profile`);
+        const profile = data.profile;
+        const content = $("publicProfileContent");
+        const publicReports = Array.isArray(profile.reports) ? profile.reports : [];
+        content.innerHTML = `<div class="public-profile-avatar">${userAvatarMarkup(profile)}</div>
+            <h2 id="publicProfileName">${escapeHTML(profile.full_name)}</h2>
+            <p class="public-profile-username">@${escapeHTML(profile.username || "")}</p>
+            <span class="public-profile-role">${escapeHTML(profile.role || "user")}</span>
+            ${profile.city ? `<p class="public-profile-city">${escapeHTML(profile.city)}</p>` : ""}
+            <div class="public-profile-stats"><span><strong>${Number(profile.report_count || 0)}</strong> reports</span><span><strong>${Number(profile.points || 0)}</strong> points</span></div>
+            <section class="public-profile-reports"><h3>Reports</h3>${publicReports.length ? `<ul>${publicReports.map(report => `<li><strong>${escapeHTML(report.title)}</strong><small>${escapeHTML(report.category || "Report")} · ${escapeHTML(report.status || "submitted")}</small></li>`).join("")}</ul>` : `<p>No reports yet.</p>`}</section>
+            <button type="button" class="submit-button" data-profile-message="${Number(profile.user_id)}" data-user-name="${escapeHTML(profile.full_name)}">${escapeHTML(getCurrentText("Send a message", "বার্তা পাঠান"))}</button>`;
+        const modal = $("publicProfileModal");
+        modal.hidden = false;
+        modal.style.display = "grid";
+        modal.setAttribute("aria-hidden", "false");
+        $("closePublicProfile").focus();
+    } catch (error) {
+        showToast(error.message || "Unable to load this profile.");
+    }
+}
+
+function closePublicProfile() {
+    const modal = $("publicProfileModal");
+    if (!modal) return;
+    modal.hidden = true;
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function renderPeople(container, users, emptyText, withDelete = false) {
+    if (!container) return;
+    if (!users.length) {
+        container.innerHTML = `<p class="inbox-list-empty">${escapeHTML(emptyText)}</p>`;
+        return;
+    }
+    container.innerHTML = users.map(user => `<article class="inbox-person">
+        <button type="button" class="inbox-person-main" data-open-conversation="${Number(user.user_id)}" data-user-name="${escapeHTML(user.full_name)}">
+            ${userAvatarMarkup(user)}<span><strong>${escapeHTML(user.full_name || "Citizen")}</strong><small>@${escapeHTML(user.username || "user")} · ${escapeHTML(user.role || "user")}</small></span>
+        </button>
+        <button type="button" class="inbox-person-profile" data-view-user="${Number(user.user_id)}" aria-label="View profile">Profile</button>
+        ${withDelete ? `<button type="button" class="inbox-delete-chat" data-delete-conversation="${Number(user.user_id)}" aria-label="Delete conversation">Delete</button>` : ""}
+    </article>`).join("");
+}
+
+async function searchInboxUsers(query) {
+    const results = $("inboxSearchResults");
+    if (!query || query.length < 2) {
+        results.replaceChildren();
+        return;
+    }
+    try {
+        const data = await apiRequest(`/api/messages/users?q=${encodeURIComponent(query)}`);
+        renderPeople(results, data.users || [], getCurrentText("No matching users.", "কোনো ব্যবহারকারী মেলেনি।"));
+    } catch (error) {
+        results.innerHTML = `<p class="inbox-list-empty">${escapeHTML(error.message)}</p>`;
+    }
+}
+
+async function loadInboxConversations() {
+    try {
+        const data = await apiRequest("/api/messages/conversations");
+        renderPeople($("inboxConversationList"), data.conversations || [], getCurrentText("No conversations yet.", "এখনও কোনো কথোপকথন নেই।"), true);
+    } catch (error) {
+        $("inboxConversationList").innerHTML = `<p class="inbox-list-empty">${escapeHTML(error.message)}</p>`;
+    }
+}
+
+async function openMessageConversation(userId, name = "") {
+    activeMessageUser = Number(userId);
+    const knownUser = [...document.querySelectorAll(`[data-open-conversation="${activeMessageUser}"]`)].map(button => button.dataset.userName).find(Boolean);
+    const displayName = name || knownUser || "Conversation";
+    $("inboxEmpty").hidden = true;
+    $("inboxActiveChat").hidden = false;
+    $("inboxChatHeader").innerHTML = `<button type="button" class="inbox-chat-profile" data-view-user="${activeMessageUser}">${escapeHTML(displayName)} <small>View profile</small></button>`;
+    await refreshMessageHistory();
+    if (inboxRefreshTimer) clearInterval(inboxRefreshTimer);
+    inboxRefreshTimer = setInterval(() => {
+        if (!$(("section-inbox")).hidden && activeMessageUser) refreshMessageHistory();
+    }, 5000);
+}
+
+async function refreshMessageHistory() {
+    if (!activeMessageUser) return;
+    try {
+        const data = await apiRequest(`/api/messages/conversations/${activeMessageUser}`);
+        const list = $("inboxMessages");
+        list.innerHTML = (data.messages || []).map(message => `<article class="inbox-message ${Number(message.sender_id) === Number(citizenProfile.user_id) ? "mine" : "theirs"}"><p>${escapeHTML(message.message_text)}</p><time>${escapeHTML(formatReportDateTime(message.created_at))}</time></article>`).join("") || `<p class="inbox-list-empty">${escapeHTML(getCurrentText("No messages yet. Say hello!", "কোনো বার্তা নেই। শুভেচ্ছা জানান!"))}</p>`;
+        list.scrollTop = list.scrollHeight;
+    } catch (error) {
+        showToast(error.message || "Unable to load messages.");
+    }
+}
+
+$("inboxUserSearch")?.addEventListener("input", event => {
+    clearTimeout(inboxSearchTimer);
+    const query = event.target.value.trim();
+    inboxSearchTimer = setTimeout(() => searchInboxUsers(query), 220);
+});
+$("inboxSearchResults")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-open-conversation]");
+    if (button) openMessageConversation(button.dataset.openConversation, button.dataset.userName);
+});
+$("inboxConversationList")?.addEventListener("click", event => {
+    const remove = event.target.closest("[data-delete-conversation]");
+    if (remove) {
+        event.stopPropagation();
+        const userId = Number(remove.dataset.deleteConversation);
+        if (window.confirm("Delete this conversation for both people?")) {
+            apiRequest(`/api/messages/conversations/${userId}`, { method: "DELETE" }).then(async () => {
+                if (activeMessageUser === userId) {
+                    activeMessageUser = null;
+                    $("inboxActiveChat").hidden = true;
+                    $("inboxEmpty").hidden = false;
+                    if (inboxRefreshTimer) clearInterval(inboxRefreshTimer);
+                }
+                await loadInboxConversations();
+                showToast("Conversation deleted.");
+            }).catch(error => showToast(error.message || "Unable to delete conversation."));
+        }
+        return;
+    }
+    const button = event.target.closest("[data-open-conversation]");
+    if (button) openMessageConversation(button.dataset.openConversation, button.dataset.userName);
+});
+$("inboxCompose")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const input = $("inboxMessageInput");
+    const message = input.value.trim();
+    if (!activeMessageUser || !message) return;
+    const button = event.currentTarget.querySelector("button[type=submit]");
+    button.disabled = true;
+    try {
+        await apiRequest(`/api/messages/conversations/${activeMessageUser}`, { method: "POST", body: JSON.stringify({ message }) });
+        input.value = "";
+        await refreshMessageHistory();
+        await loadInboxConversations();
+    } catch (error) {
+        showToast(error.message || "Unable to send message.");
+    } finally {
+        button.disabled = false;
+    }
+});
+$("closePublicProfile")?.addEventListener("click", closePublicProfile);
+$("publicProfileModal")?.addEventListener("click", event => { if (event.target === $("publicProfileModal")) closePublicProfile(); });
+$("publicProfileContent")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-profile-message]");
+    if (!button) return;
+    closePublicProfile();
+    navigate("inbox");
+    openMessageConversation(button.dataset.profileMessage, button.dataset.userName);
+});
+$("inboxChatHeader")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-view-user]");
+    if (button) openPublicProfile(button.dataset.viewUser);
+});
+
+document.addEventListener("click", event => {
+    const button = event.target.closest(".inbox-person-profile");
+    if (button?.dataset.viewUser && Number(button.dataset.viewUser)) openPublicProfile(button.dataset.viewUser);
+});
 
 async function initializeCitizenPortal() {
     // Modal backdrops are hidden until their corresponding action requests them.

@@ -183,6 +183,7 @@ router.post("/register", async (req, res) => {
                 [fullName.trim(), normalizedPhone, passwordHash]
             );
             const userId = insert.insertId;
+            await connection.execute("UPDATE users SET username = CONCAT('user', user_id) WHERE user_id = ?", [userId]);
             await new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
             req.session.user = { user_id: userId, full_name: fullName.trim(), email: null, phone: normalizedPhone, role: "citizen" };
             await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
@@ -218,6 +219,7 @@ router.post("/register", async (req, res) => {
         );
 
         createdUserId = insertResult.insertId;
+        await connection.execute("UPDATE users SET username = CONCAT('user', user_id) WHERE user_id = ?", [createdUserId]);
 
         await saveOTP(connection, createdUserId, otp);
 
@@ -340,6 +342,7 @@ router.post("/google", async (req, res) => {
                  VALUES (?, ?, ?, ?, 'google', 'citizen', 'pending', 0)`,
                 [fullName, normalizedEmail, googleId, unusablePasswordHash]
             );
+            await connection.execute("UPDATE users SET username = CONCAT('user', user_id) WHERE user_id = ?", [insert.insertId]);
 
             users = [{
                 user_id: insert.insertId,
