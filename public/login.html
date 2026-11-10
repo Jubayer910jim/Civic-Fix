@@ -240,6 +240,31 @@
                     novalidate
                 >
 
+                    <div class="form-group institution-login-group" id="institutionPickerGroup" hidden>
+                        <label id="institutionPickerLabel">Choose your institution</label>
+                        <div class="institution-picker" id="institutionPicker">
+                            <button type="button" class="institution-picker-trigger" id="institutionPickerTrigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="institutionPickerLabel institutionChoiceName">
+                                <img id="institutionChoiceLogo" alt="" hidden>
+                                <span id="institutionChoiceName">Select an institution</span>
+                                <span class="institution-picker-chevron" aria-hidden="true">⌄</span>
+                            </button>
+                            <div class="institution-picker-options" id="institutionPickerOptions" role="listbox" aria-labelledby="institutionPickerLabel" hidden>
+                                <button type="button" role="option" data-institution-key="wasa" data-institution-email="" data-institution-name="WASA">
+                                    <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Seal_of_Dhaka_Water_Supply_and_Sewerage_Authority.svg" alt="" loading="lazy">
+                                    <span><strong>WASA</strong><small>Water supply and sewerage</small></span>
+                                </button>
+                                <button type="button" role="option" data-institution-key="city-corporation" data-institution-email="" data-institution-name="City Corporation">
+                                    <img src="https://erevenue.dncc.gov.bd/images/logo_TL_Print.png" alt="" loading="lazy">
+                                    <span><strong>City Corporation</strong><small>Roads, drainage and city services</small></span>
+                                </button>
+                                <button type="button" role="option" data-institution-key="pollibiddut" data-institution-email="" data-institution-name="Palli Bidyut">
+                                    <img src="https://www.tbsnews.net/sites/default/files/styles/author/public/organization/logo/bangladesh_rural_electrification_board.jpg" alt="" loading="lazy">
+                                    <span><strong>Pollibiddut</strong><small>Electricity supply and outages</small></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
 
                     <!-- Email -->
 

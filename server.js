@@ -687,7 +687,7 @@ app.post(
 
         try {
 
-            const { email, phone, method, password } = req.body;
+            const { email, phone, method, password, role: requestedRole, institutionKey } = req.body;
             const loginMethod = method === "phone" ? "phone" : "email";
             let loginValue = loginMethod === "phone" ? phone : email;
 
@@ -827,13 +827,11 @@ app.post(
             }
 
 
-            // Only Citizen and Admin portals
-            // are currently available
-
             if (
                 user.role !== "citizen" &&
-
-                user.role !== "admin"
+                user.role !== "admin" &&
+                user.role !== "authority" &&
+                user.role !== "institution"
             ) {
 
                 return res
@@ -843,10 +841,41 @@ app.post(
                         success: false,
 
                         message:
-                            "This portal is not available yet."
+                        "This account does not have a supported portal."
 
                     });
 
+            }
+
+            if (requestedRole && requestedRole !== user.role) {
+                return res.status(403).json({ success: false, message: "This account is not assigned to the selected portal." });
+            }
+
+            let institutionAccount = null;
+            if (user.role === "institution") {
+                const institutionOptions = {
+                    wasa: { email: "wasauser@admin.com", matches: name => name.includes("wasa") },
+                    "city-corporation": { email: "citycorporation@admin.com", matches: name => name.includes("citycorporation") },
+                    pollibiddut: { email: "pollibiddut@admin.com", matches: name => name.includes("pollibiddut") || name.includes("pallibidyut") }
+                };
+                const selectedInstitution = institutionOptions[institutionKey];
+                if (!selectedInstitution || String(user.email || "").toLowerCase() !== selectedInstitution.email) {
+                    return res.status(403).json({ success: false, message: "Choose the institution linked to this account." });
+                }
+                const [accounts] = await db.query(
+                    `SELECT m.institution_id, i.institution_name
+                     FROM institution_user_accounts m
+                     JOIN institutions i ON i.institution_id = m.institution_id
+                     WHERE m.user_id = ? LIMIT 1`, [user.user_id]
+                );
+                if (!accounts.length) {
+                    return res.status(403).json({ success: false, message: "This institution user has not been linked to an institution. Contact an administrator." });
+                }
+                const actualInstitutionKey = String(accounts[0].institution_name || "").toLowerCase().replace(/[^a-z]/g, "");
+                if (!selectedInstitution.matches(actualInstitutionKey)) {
+                    return res.status(403).json({ success: false, message: "This account is linked to a different institution." });
+                }
+                institutionAccount = accounts[0];
             }
 
 
@@ -865,6 +894,8 @@ app.post(
 
                 role:
                     user.role,
+
+                institution_id: institutionAccount ? institutionAccount.institution_id : null,
 
                 
                     
@@ -922,7 +953,8 @@ app.post(
                                 user.email,
 
                             role:
-                                user.role
+                                user.role,
+                            institution_name: institutionAccount ? institutionAccount.institution_name : null
 
                         }
 
@@ -1393,6 +1425,138 @@ app.get(
     }
 );
 
+
+// ==========================================
+// INSTITUTION PORTAL
+// ==========================================
+
+app.get("/api/authority/dashboard", requireRole("authority"), async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            `SELECT r.report_id, r.tracking_code, r.title, r.status, r.priority,
+                    r.created_at, r.updated_at, COALESCE(i.institution_name, 'Unassigned') AS institution_name
+             FROM reports r
+             LEFT JOIN institutions i ON i.institution_id = r.assigned_institution_id
+             WHERE LOWER(r.status) IN ('submitted', 'under_review', 'forwarded', 'pending', 'in_progress')
+             ORDER BY r.created_at ASC LIMIT 1000`
+        );
+        const [feedback] = await db.query(
+            `SELECT c.comment_id, c.comment_text, c.created_at, r.report_id,
+                    r.tracking_code, r.title, u.full_name AS citizen_name,
+                    i.institution_name
+             FROM report_comments c
+             JOIN reports r ON r.report_id = c.report_id
+             JOIN users u ON u.user_id = c.user_id
+             LEFT JOIN institutions i ON i.institution_id = r.assigned_institution_id
+             WHERE u.role = 'citizen'
+             ORDER BY c.created_at DESC, c.comment_id DESC LIMIT 100`
+        );
+        const today = Date.now();
+        const dayCount = value => Math.max(0, Math.floor((today - new Date(value || today).getTime()) / 86400000));
+        const cases = rows.map(report => {
+            const status = String(report.status || "").toLowerCase();
+            const targetDays = status === "in_progress" ? 14 : 7;
+            const ageDays = dayCount(report.created_at);
+            const daysSinceUpdate = dayCount(report.updated_at || report.created_at);
+            return { ...report, target_days: targetDays, age_days: ageDays, days_since_update: daysSinceUpdate,
+                is_overdue: ageDays > targetDays, is_sla_breached: daysSinceUpdate > targetDays };
+        });
+        const institutionMap = new Map();
+        cases.filter(report => report.is_overdue).forEach(report => {
+            const key = report.institution_name || "Unassigned";
+            const value = institutionMap.get(key) || { institution_name: key, overdue_cases: 0, oldest_case_days: 0 };
+            value.overdue_cases += 1;
+            value.oldest_case_days = Math.max(value.oldest_case_days, report.age_days);
+            institutionMap.set(key, value);
+        });
+        const repeatedDelays = [...institutionMap.values()].filter(item => item.overdue_cases > 1)
+            .sort((a, b) => b.overdue_cases - a.overdue_cases || b.oldest_case_days - a.oldest_case_days);
+        return res.json({ success: true, sla_policy: { awaiting_days: 7, in_progress_days: 14 },
+            stats: { overdue_cases: cases.filter(report => report.is_overdue).length,
+                sla_breaches: cases.filter(report => report.is_sla_breached).length,
+                citizen_feedback: feedback.length, repeated_delays: repeatedDelays.length },
+            cases: cases.sort((a, b) => Number(b.is_sla_breached) - Number(a.is_sla_breached) || b.age_days - a.age_days),
+            feedback, repeated_delays: repeatedDelays });
+    } catch (error) {
+        console.error("Authority dashboard error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to load authority oversight data." });
+    }
+});
+
+async function getInstitutionAccount(userId) {
+    const [rows] = await db.query(
+        `SELECT i.institution_id, i.institution_name, u.user_id, u.full_name, u.email
+         FROM institution_user_accounts m
+         JOIN institutions i ON i.institution_id = m.institution_id
+         JOIN users u ON u.user_id = m.user_id
+         WHERE m.user_id = ? AND u.account_status = 'active'
+         LIMIT 1`, [userId]
+    );
+    return rows[0] || null;
+}
+
+app.get("/api/institution/profile", requireRole("institution"), async (req, res) => {
+    try {
+        const profile = await getInstitutionAccount(getLoggedInUserId(req));
+        if (!profile) return res.status(403).json({ success: false, message: "Your account is not linked to an institution." });
+        return res.json({ success: true, profile });
+    } catch (error) {
+        console.error("Institution profile error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to load your institution profile." });
+    }
+});
+
+app.get("/api/institution/reports", requireRole("institution"), async (req, res) => {
+    try {
+        const account = await getInstitutionAccount(getLoggedInUserId(req));
+        if (!account) return res.status(403).json({ success: false, message: "Your account is not linked to an institution." });
+        const [reports] = await db.query(
+            `SELECT r.report_id, r.tracking_code, r.title, r.description,
+                    r.location_address, r.latitude, r.longitude, r.priority,
+                    r.status, r.created_at, u.full_name AS citizen_name,
+                    c.category_name, i.institution_name
+             FROM reports r
+             LEFT JOIN users u ON u.user_id = r.citizen_id
+             LEFT JOIN issue_categories c ON c.category_id = r.category_id
+             JOIN institutions i ON i.institution_id = r.assigned_institution_id
+             WHERE r.assigned_institution_id = ?
+             ORDER BY r.created_at DESC, r.report_id DESC`, [account.institution_id]
+        );
+        await addImagesToReports(reports);
+        const stats = {
+            total: reports.length,
+            pending: reports.filter(report => ["forwarded", "submitted", "under_review", "pending"].includes(String(report.status).toLowerCase())).length,
+            inProgress: reports.filter(report => String(report.status).toLowerCase() === "in_progress").length,
+            resolved: reports.filter(report => ["resolved", "closed"].includes(String(report.status).toLowerCase())).length
+        };
+        return res.json({ success: true, institution: account.institution_name, stats, reports });
+    } catch (error) {
+        console.error("Institution reports error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to load assigned reports." });
+    }
+});
+
+app.patch("/api/institution/reports/:reportId/status", requireRole("institution"), async (req, res) => {
+    const reportId = Number(req.params.reportId);
+    const status = typeof req.body?.status === "string" ? req.body.status : "";
+    if (!Number.isSafeInteger(reportId) || reportId < 1) return res.status(400).json({ success: false, message: "Invalid report." });
+    if (!["in_progress", "resolved"].includes(status)) return res.status(400).json({ success: false, message: "Choose In progress or Resolved." });
+    try {
+        const account = await getInstitutionAccount(getLoggedInUserId(req));
+        if (!account) return res.status(403).json({ success: false, message: "Your account is not linked to an institution." });
+        const [result] = await db.query(
+            `UPDATE reports SET status = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE report_id = ? AND assigned_institution_id = ?
+               AND status IN ('forwarded', 'pending', 'submitted', 'under_review', 'in_progress')`,
+            [status, reportId, account.institution_id]
+        );
+        if (!result.affectedRows) return res.status(404).json({ success: false, message: "Assigned report not found or it is closed." });
+        return res.json({ success: true, message: "Report status updated." });
+    } catch (error) {
+        console.error("Institution status update error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to update this report." });
+    }
+});
 
 // ==========================================
 // 18. GET CITIZEN PROFILE

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#163c49">
+    <title>Authority Dashboard | Civic Fix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/authority.css">
+</head>
+<body>
+    <div class="authority-shell">
+        <aside class="authority-sidebar" id="authoritySidebar">
+            <a class="authority-brand" href="/"><span class="authority-brand-mark" aria-hidden="true">⌂</span><span>Civic <strong>Fix</strong><small data-i18n="authorityPortal">AUTHORITY PORTAL</small></span></a>
+            <p class="sidebar-label" data-i18n="oversight">OVERSIGHT</p>
+            <nav class="authority-nav" aria-label="Authority navigation">
+                <a class="active" href="#dashboard"><span>▦</span><span data-i18n="dashboard">Dashboard</span></a>
+                <a href="#delayReview"><span>◷</span><span data-i18n="caseDelays">Case delays</span><b id="navOverdueCount" hidden>0</b></a>
+                <a href="#feedback"><span>♡</span><span data-i18n="citizenFeedback">Citizen feedback</span></a>
+            </nav>
+            <div class="sidebar-bottom"><div class="sidebar-note"><span>!</span><div><strong data-i18n="oversightOnly">Oversight view</strong><small data-i18n="oversightHint">Review progress across assigned institutions.</small></div></div>
+                <button class="logout-button" type="button" id="logoutButton" data-i18n="logout">Log out</button>
+                <a class="home-link" href="/" data-i18n="backHome">← Back to homepage</a>
+            </div>
+        </aside>
+        <main class="authority-main">
+            <header class="authority-topbar">
+                <button type="button" class="menu-button" id="menuButton" aria-label="Open navigation" data-i18n-aria="openNavigation">☰</button>
+                <div class="topbar-heading"><span class="eyebrow" data-i18n="oversightWorkspace">CIVIC FIX · OVERSIGHT</span><h1 data-i18n="dashboardTitle">Authority Dashboard</h1></div>
+                <div class="topbar-tools"><button type="button" id="themeToggle" class="icon-button" aria-label="Switch to dark mode" title="Switch to dark mode">☾</button>
+                    <button type="button" id="languageToggle" class="language-button" aria-label="Switch to Bangla">বাংলা</button>
+                    <span class="account-chip"><span class="account-avatar" id="accountAvatar">A</span><span><strong id="accountName" data-i18n="loadingAccount">Loading account…</strong><small data-i18n="authorityRole">Authority</small></span></span>
+                </div>
+            </header>
+            <div class="authority-content" id="dashboard">
+                <section class="hero-panel"><div><span class="hero-kicker" data-i18n="heroKicker">PUBLIC SERVICE OVERSIGHT</span><h2 data-i18n="heroTitle">See where cases need attention.</h2><p data-i18n="heroDescription">Track overdue reports, service targets, recurring delays and what citizens are saying.</p></div><button type="button" id="refreshButton" class="refresh-button"><span>↻</span><span data-i18n="refresh">Refresh data</span></button></section>
+                <section class="metric-grid" aria-label="Authority summary">
+                    <article class="metric-card metric-overdue"><span class="metric-symbol">◷</span><small data-i18n="overdueCases">Overdue cases</small><strong id="overdueCount">—</strong><span data-i18n="openCasesPastTarget">Open cases past target</span></article>
+                    <article class="metric-card metric-breach"><span class="metric-symbol">!</span><small data-i18n="slaBreaches">SLA breaches</small><strong id="breachCount">—</strong><span data-i18n="staleCases">Cases with no timely update</span></article>
+                    <article class="metric-card metric-feedback"><span class="metric-symbol">♡</span><small data-i18n="citizenFeedback">Citizen feedback</small><strong id="feedbackCount">—</strong><span data-i18n="recentComments">Recent citizen comments</span></article>
+                    <article class="metric-card metric-repeat"><span class="metric-symbol">↻</span><small data-i18n="repeatedDelays">Repeated delays</small><strong id="repeatCount">—</strong><span data-i18n="institutionsWithRepeat">Institutions with multiple overdue cases</span></article>
+                </section>
+                <section class="policy-strip"><span class="policy-icon">i</span><p><strong data-i18n="slaPolicy">SLA monitoring policy</strong><span data-i18n="slaPolicyText">Awaiting action: 7 days · In progress: 14 days. A breach is flagged when a case has had no update within its target.</span></p></section>
+                <section class="oversight-grid" id="delayReview">
+                    <article class="content-card delay-card"><div class="section-heading"><div><span class="eyebrow" data-i18n="needsAttention">NEEDS ATTENTION</span><h2 data-i18n="delayReviewTitle">Overdue cases & SLA breaches</h2><p data-i18n="delayReviewDescription">Open cases grouped by the institution handling them.</p></div><select id="caseFilter" aria-label="Filter cases"><option value="all" data-i18n="allDelayed">All delayed</option><option value="overdue" data-i18n="overdueOnly">Overdue</option><option value="breach" data-i18n="breachesOnly">SLA breaches</option></select></div>
+                        <div class="table-wrap"><table><thead><tr><th data-i18n="report">Report</th><th data-i18n="institution">Institution</th><th data-i18n="status">Status</th><th data-i18n="caseAge">Age</th><th data-i18n="lastUpdate">Last update</th><th data-i18n="signal">Signal</th></tr></thead><tbody id="caseRows"><tr><td colspan="6" class="table-state" data-i18n="loadingData">Loading oversight data…</td></tr></tbody></table></div>
+                    </article>
+                    <article class="content-card repeat-card"><div class="section-heading"><div><span class="eyebrow" data-i18n="patterns">PATTERNS</span><h2 data-i18n="repeatTitle">Repeated delays by institution</h2><p data-i18n="repeatDescription">Institutions with more than one overdue open case.</p></div></div><div id="repeatList" class="repeat-list"><div class="table-state" data-i18n="loadingData">Loading oversight data…</div></div></article>
+                </section>
+                <section id="feedback" class="content-card feedback-card"><div class="section-heading"><div><span class="eyebrow" data-i18n="citizenVoice">CITIZEN VOICE</span><h2 data-i18n="feedbackTitle">Recent citizen feedback</h2><p data-i18n="feedbackDescription">Comments posted by citizens on their reports.</p></div><span class="feedback-count" id="feedbackSectionCount">0</span></div><div id="feedbackList" class="feedback-list"><div class="table-state" data-i18n="loadingData">Loading oversight data…</div></div></section>
+                <footer class="authority-footer"><span>© 2026 Civic Fix</span><span data-i18n="footer">Better services through transparent follow-up.</span><span id="lastRefreshed"></span></footer>
+            </div>
+        </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <script src="js/authority.js" defer></script>
+</body>
+</html>

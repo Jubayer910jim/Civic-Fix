@@ -28,9 +28,12 @@ const loginTranslations = {
         otpLabel: "Verification code", otpPlaceholder: "Enter 6-digit code", verify: "Verify and continue", resend: "Resend code",
         citizenTitle: "Your Community. Your Voice.", citizenDesc: "Report community problems, track your complaints, and stay updated about their progress.",
         adminTitle: "Manage Issues. Create Solutions.", adminDesc: "Review community reports, verify AI suggestions, and manage the issue resolution process.",
+        institutionTitle: "Turn Reports into Results.", institutionDesc: "Review issues assigned to your institution and keep citizens informed as work progresses.",
+        authorityTitle: "See Delays. Drive Accountability.", authorityDesc: "Monitor overdue cases, SLA breaches, citizen feedback and repeated delays across institutions.",
         citizenLogin: "Citizen Login", adminLogin: "Admin Login", citizenSubtitle: "Sign in to access your Citizen Portal.",
-        adminSubtitle: "Sign in to access the Civic Fix Admin Dashboard.", citizenTag: "CITIZEN PORTAL", adminTag: "ADMIN PORTAL",
-        loginCitizen: "Login as Citizen", loginAdmin: "Login as Admin", signIn: "Signing in...", loggedIn: "Login successful! Redirecting...",
+        authorityLogin: "Authority Login", authoritySubtitle: "Sign in to access the Authority Oversight Dashboard.",
+        adminSubtitle: "Sign in to access the Civic Fix Admin Dashboard.", institutionSubtitle: "Sign in to manage reports assigned to your institution.", authorityTag: "AUTHORITY PORTAL", citizenTag: "CITIZEN PORTAL", adminTag: "ADMIN PORTAL", institutionTag: "INSTITUTION PORTAL",
+        institutionLogin: "Institution Login", loginInstitution: "Login as Institution", institutionAccountEmail: "Institution account email", institutionPickerLabel: "Choose your institution", institutionSelectPlaceholder: "Select an institution", loginCitizen: "Login as Citizen", loginAdmin: "Login as Admin", loginAuthority: "Login as Authority", signIn: "Signing in...", loggedIn: "Login successful! Redirecting...",
         enterPhone: "Please enter your phone number.", enterEmail: "Please enter your email address.", enterPassword: "Please enter your password.",
         loginFailed: "Login failed. Check your details and try again.", googleCredential: "Google did not return a sign-in credential.", googleFailed: "Google sign-in failed.",
         otpInvalid: "Enter the 6-digit code from your email.", otpVerify: "Could not verify the code.", otpVerified: "Code verified. Redirecting...", otpResend: "Could not resend the code.",
@@ -47,9 +50,12 @@ const loginTranslations = {
         otpLabel: "যাচাইকরণ কোড", otpPlaceholder: "৬ সংখ্যার কোড লিখুন", verify: "যাচাই করে চালিয়ে যান", resend: "কোড আবার পাঠান",
         citizenTitle: "আপনার কমিউনিটি। আপনার কণ্ঠস্বর।", citizenDesc: "কমিউনিটির সমস্যা জানান, অভিযোগের অগ্রগতি দেখুন এবং সর্বশেষ তথ্য জানুন।",
         adminTitle: "সমস্যা পরিচালনা করুন। সমাধান তৈরি করুন।", adminDesc: "কমিউনিটির প্রতিবেদন পর্যালোচনা, AI পরামর্শ যাচাই এবং সমস্যা সমাধানের প্রক্রিয়া পরিচালনা করুন।",
+        institutionTitle: "প্রতিবেদনকে সমাধানে রূপ দিন।", institutionDesc: "আপনার প্রতিষ্ঠানে পাঠানো সমস্যা পর্যালোচনা করুন এবং কাজের অগ্রগতি নাগরিকদের জানান।",
+        authorityTitle: "বিলম্ব দেখুন। জবাবদিহি নিশ্চিত করুন।", authorityDesc: "প্রতিষ্ঠানজুড়ে বিলম্বিত প্রতিবেদন, SLA লঙ্ঘন, নাগরিক মতামত ও পুনরাবৃত্ত বিলম্ব পর্যবেক্ষণ করুন।",
         citizenLogin: "নাগরিক লগইন", adminLogin: "অ্যাডমিন লগইন", citizenSubtitle: "আপনার নাগরিক পোর্টালে প্রবেশ করুন।",
-        adminSubtitle: "Civic Fix অ্যাডমিন ড্যাশবোর্ডে প্রবেশ করুন।", citizenTag: "নাগরিক পোর্টাল", adminTag: "অ্যাডমিন পোর্টাল",
-        loginCitizen: "নাগরিক হিসেবে লগইন", loginAdmin: "অ্যাডমিন হিসেবে লগইন", signIn: "লগইন হচ্ছে...", loggedIn: "লগইন সফল! পৃষ্ঠায় নেওয়া হচ্ছে...",
+        authorityLogin: "কর্তৃপক্ষ লগইন", authoritySubtitle: "কর্তৃপক্ষের তদারকি ড্যাশবোর্ডে প্রবেশ করুন।",
+        adminSubtitle: "Civic Fix অ্যাডমিন ড্যাশবোর্ডে প্রবেশ করুন।", institutionSubtitle: "আপনার প্রতিষ্ঠানে বরাদ্দ করা প্রতিবেদন পরিচালনা করতে লগইন করুন।", authorityTag: "কর্তৃপক্ষ পোর্টাল", citizenTag: "নাগরিক পোর্টাল", adminTag: "অ্যাডমিন পোর্টাল", institutionTag: "প্রতিষ্ঠান পোর্টাল",
+        institutionLogin: "প্রতিষ্ঠান লগইন", loginInstitution: "প্রতিষ্ঠান হিসেবে লগইন", institutionAccountEmail: "প্রতিষ্ঠানের ইমেইল", institutionPickerLabel: "আপনার প্রতিষ্ঠান নির্বাচন করুন", institutionSelectPlaceholder: "প্রতিষ্ঠান নির্বাচন করুন", loginCitizen: "নাগরিক হিসেবে লগইন", loginAdmin: "অ্যাডমিন হিসেবে লগইন", loginAuthority: "কর্তৃপক্ষ হিসেবে লগইন", signIn: "লগইন হচ্ছে...", loggedIn: "লগইন সফল! পৃষ্ঠায় নেওয়া হচ্ছে...",
         enterPhone: "আপনার ফোন নম্বর লিখুন।", enterEmail: "আপনার ইমেইল ঠিকানা লিখুন।", enterPassword: "আপনার পাসওয়ার্ড লিখুন।",
         loginFailed: "লগইন ব্যর্থ হয়েছে। তথ্য যাচাই করে আবার চেষ্টা করুন।", googleCredential: "Google থেকে লগইন তথ্য পাওয়া যায়নি।", googleFailed: "Google দিয়ে লগইন ব্যর্থ হয়েছে।",
         otpInvalid: "ইমেইলে পাওয়া ৬ সংখ্যার কোডটি লিখুন।", otpVerify: "কোড যাচাই করা যায়নি।", otpVerified: "কোড যাচাই হয়েছে। পৃষ্ঠায় নেওয়া হচ্ছে...", otpResend: "কোড আবার পাঠানো যায়নি।",
@@ -116,6 +122,7 @@ const portalDescription =
 
 const urlParameters =
     new URLSearchParams(window.location.search);
+let selectedInstitutionKey = "";
 
 
 let selectedRole =
@@ -126,7 +133,9 @@ let selectedRole =
 
 if (
     selectedRole !== "citizen" &&
-    selectedRole !== "admin"
+    selectedRole !== "admin" &&
+    selectedRole !== "authority" &&
+    selectedRole !== "institution"
 ) {
 
     // Default role
@@ -227,12 +236,76 @@ function setupPortalDesign() {
 
     }
 
+    else if (selectedRole === "institution") {
+        document.title = "Institution Login | Civic Fix";
+        loginPortalIcon.textContent = "▣";
+        loginTitle.textContent = t("institutionLogin");
+        loginSubtitle.textContent = t("institutionSubtitle");
+        portalTag.textContent = t("institutionTag");
+        portalTitle.textContent = t("institutionTitle");
+        portalDescription.textContent = t("institutionDesc");
+        loginButtonText.textContent = t("loginInstitution");
+        methodToggle.hidden = true;
+        googleLoginSection.hidden = true;
+        document.getElementById("institutionPickerGroup").hidden = false;
+        emailInput.readOnly = true;
+        emailInput.value = "";
+        emailInput.placeholder = t("institutionSelectPlaceholder");
+        document.getElementById("institutionPickerLabel").textContent = t("institutionPickerLabel");
+    }
+    else if (selectedRole === "authority") {
+        document.title = currentLanguage === "bn" ? "কর্তৃপক্ষ লগইন | Civic Fix" : "Authority Login | Civic Fix";
+        loginPortalIcon.textContent = "⚖";
+        loginTitle.textContent = t("authorityLogin");
+        loginSubtitle.textContent = t("authoritySubtitle");
+        portalTag.textContent = t("authorityTag");
+        portalTitle.textContent = t("authorityTitle");
+        portalDescription.textContent = t("authorityDesc");
+        loginButtonText.textContent = t("loginAuthority");
+        methodToggle.hidden = true;
+        googleLoginSection.hidden = true;
+    }
+
 }
 
 
 // Run immediately
 
 setupPortalDesign();
+
+function selectInstitution(option) {
+    selectedInstitutionKey = option.dataset.institutionKey || "";
+    const fixedEmail = option.dataset.institutionEmail || "";
+    emailInput.value = fixedEmail;
+    emailInput.readOnly = false;
+    emailInput.placeholder = t("emailPlaceholder");
+    document.getElementById("institutionChoiceName").textContent = option.dataset.institutionName || t("institutionSelectPlaceholder");
+    const logo = document.getElementById("institutionChoiceLogo");
+    const optionLogo = option.querySelector("img");
+    logo.src = optionLogo ? optionLogo.src : "";
+    logo.alt = option.dataset.institutionName ? `${option.dataset.institutionName} logo` : "";
+    logo.hidden = !logo.src;
+    document.getElementById("institutionPickerOptions").hidden = true;
+    document.getElementById("institutionPickerTrigger").setAttribute("aria-expanded", "false");
+    clearMessage();
+}
+
+document.getElementById("institutionPickerTrigger").addEventListener("click", () => {
+    const options = document.getElementById("institutionPickerOptions");
+    options.hidden = !options.hidden;
+    document.getElementById("institutionPickerTrigger").setAttribute("aria-expanded", String(!options.hidden));
+});
+document.getElementById("institutionPickerOptions").addEventListener("click", event => {
+    const option = event.target.closest("[data-institution-key]");
+    if (option) selectInstitution(option);
+});
+document.addEventListener("click", event => {
+    const picker = document.getElementById("institutionPicker");
+    if (!picker.contains(event.target)) {
+        document.getElementById("institutionPickerOptions").hidden = true;
+        document.getElementById("institutionPickerTrigger").setAttribute("aria-expanded", "false");
+    }
+});
 
 function setLoginMethod(method) {
     loginMethod = method;
@@ -247,7 +320,7 @@ function setLoginMethod(method) {
     phonePrefix.hidden = !usePhone;
     emailTab.setAttribute("aria-pressed", String(!usePhone));
     phoneTab.setAttribute("aria-pressed", String(usePhone));
-    emailInput.value = "";
+    if (selectedRole !== "institution") emailInput.value = "";
     clearMessage();
 }
 
@@ -257,7 +330,7 @@ setLoginMethod("email");
 
 function applyLoginLanguage() {
     document.documentElement.lang = currentLanguage;
-    document.title = currentLanguage === "bn" ? "লগইন | Civic Fix" : (selectedRole === "admin" ? "Admin Login | Civic Fix" : "Citizen Login | Civic Fix");
+    document.title = selectedRole === "institution" ? t("institutionLogin") + " | Civic Fix" : currentLanguage === "bn" ? (selectedRole === "authority" ? "কর্তৃপক্ষ লগইন | Civic Fix" : "লগইন | Civic Fix") : (selectedRole === "authority" ? "Authority Login | Civic Fix" : selectedRole === "admin" ? "Admin Login | Civic Fix" : "Citizen Login | Civic Fix");
     document.querySelector(".back-link").textContent = t("back");
     document.querySelector(".feature-list .feature-item:nth-child(1) span:last-child").textContent = t("secure");
     document.querySelector(".feature-list .feature-item:nth-child(2) span:last-child").textContent = t("track");
@@ -278,17 +351,23 @@ function applyLoginLanguage() {
     document.querySelector(".login-note strong").textContent = t("noteTitle");
     document.querySelector(".login-note p").textContent = t("note");
     const prompt = document.querySelector(".login-register-prompt");
+    prompt.hidden = selectedRole !== "citizen";
     prompt.firstChild.textContent = `${t("newHere")} `;
     prompt.querySelector("a").textContent = t("create");
-    portalTag.textContent = selectedRole === "admin" ? t("adminTag") : t("citizenTag");
-    portalTitle.textContent = selectedRole === "admin" ? t("adminTitle") : t("citizenTitle");
-    portalDescription.textContent = selectedRole === "admin" ? t("adminDesc") : t("citizenDesc");
-    loginTitle.textContent = selectedRole === "admin" ? t("adminLogin") : t("citizenLogin");
-    loginSubtitle.textContent = selectedRole === "admin" ? t("adminSubtitle") : t("citizenSubtitle");
-    loginButtonText.textContent = selectedRole === "admin" ? t("loginAdmin") : t("loginCitizen");
+    const roleText = selectedRole === "admin" ? "admin" : selectedRole === "authority" ? "authority" : selectedRole === "institution" ? "institution" : "citizen";
+    portalTag.textContent = t(`${roleText}Tag`);
+    portalTitle.textContent = t(`${roleText}Title`);
+    portalDescription.textContent = t(`${roleText}Desc`);
+    loginTitle.textContent = t(roleText === "institution" ? "institutionLogin" : `${roleText}Login`);
+    loginSubtitle.textContent = t(`${roleText}Subtitle`);
+    loginButtonText.textContent = t(`login${roleText[0].toUpperCase()}${roleText.slice(1)}`);
     document.getElementById("languageToggle").textContent = t("language");
     document.getElementById("languageToggle").setAttribute("aria-label", currentLanguage === "en" ? "Switch language to Bangla" : "Switch language to English");
     setLoginMethod(loginMethod);
+    if (selectedRole === "institution") {
+        identifierLabel.textContent = t("institutionAccountEmail");
+        document.getElementById("institutionPickerLabel").textContent = t("institutionPickerLabel");
+    }
     if (window.google && window.google.accounts && window.google.accounts.id && selectedRole === "citizen") {
         googleLoginButton.replaceChildren();
         window.google.accounts.id.renderButton(googleLoginButton, { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: 320, locale: currentLanguage });
@@ -424,6 +503,12 @@ loginForm.addEventListener(
         // VALIDATION
         // ==========================================
 
+        if (selectedRole === "institution" && !selectedInstitutionKey) {
+            showMessage(t("institutionPickerLabel"));
+            document.getElementById("institutionPickerTrigger").focus();
+            return;
+        }
+
         if (!identifier) {
 
 
@@ -437,7 +522,6 @@ loginForm.addEventListener(
             return;
 
         }
-
 
         if (!password) {
 
@@ -492,7 +576,8 @@ loginForm.addEventListener(
                             JSON.stringify({
                                 ...(loginMethod === "phone" ? { phone: identifier, method: "phone" } : { email: identifier, method: "email" }),
                                 password: password,
-                                role: selectedRole
+                                role: selectedRole,
+                                institutionKey: selectedRole === "institution" ? selectedInstitutionKey : undefined
                             })
 
                     }
@@ -580,6 +665,17 @@ loginForm.addEventListener(
                     600
                 );
 
+            }
+
+            else if (data.user.role === "institution") {
+                window.setTimeout(function () {
+                    window.location.href = "/institution.html";
+                }, 600);
+            }
+            else if (data.user.role === "authority") {
+                window.setTimeout(function () {
+                    window.location.href = "/authority.html";
+                }, 600);
             }
 
 

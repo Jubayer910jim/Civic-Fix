@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#087c78">
+    <title>Institution Portal | Civic Fix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/institution.css">
+</head>
+<body>
+    <div class="institution-shell">
+        <aside class="institution-sidebar" id="institutionSidebar">
+            <a class="institution-brand" href="/" aria-label="Civic Fix home">
+                <span class="institution-brand-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M8 22.5 24 9l16 13.5v17a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2z"/><path d="m18 31.5 4.5 4.5L32 25.5"/></svg></span>
+                <span>Civic <strong>Fix</strong><small data-i18n="institutionPortal">INSTITUTION PORTAL</small></span>
+            </a>
+            <div class="sidebar-label" data-i18n="workspace">WORKSPACE</div>
+            <nav class="institution-nav" aria-label="Institution navigation">
+                <a href="#overview" class="active" data-page="overview"><span aria-hidden="true">⌂</span><span data-i18n="overview">Overview</span><b id="navReportCount">0</b></a>
+                <a href="#inbox" data-page="inbox"><span aria-hidden="true">✉</span><span data-i18n="inbox">Inbox</span><b id="navInboxCount" hidden>0</b></a>
+                <a href="#notifications" data-page="notifications"><span aria-hidden="true">♧</span><span data-i18n="notifications">Notifications</span><b id="navNotificationCount" hidden>0</b></a>
+            </nav>
+            <div class="sidebar-bottom">
+                <div class="sidebar-note"><span aria-hidden="true">✓</span><div><strong data-i18n="communityService">Community service</strong><small data-i18n="progressTip">Clear updates help citizens follow progress.</small></div></div>
+                <button type="button" class="logout-button" id="logoutButton" data-i18n="logout">Log out</button>
+                <a class="home-link" href="/" data-i18n="backHome">← Back to homepage</a>
+            </div>
+        </aside>
+
+        <main class="institution-main">
+            <header class="institution-topbar">
+                <button class="menu-button" id="menuButton" aria-label="Open navigation" aria-expanded="false" data-i18n-aria="openNavigation">☰</button>
+                <div class="topbar-heading"><span class="eyebrow" data-i18n="institutionWorkspace">INSTITUTION WORKSPACE</span><h1 id="institutionName">Institution Portal</h1></div>
+                <div class="topbar-tools">
+                    <button type="button" class="appearance-button" id="themeToggle" aria-label="Switch to dark mode" title="Switch to dark mode">☾</button>
+                    <button type="button" class="language-button" id="languageToggle" aria-label="Switch to Bangla" title="Switch to Bangla">বাংলা</button>
+                    <div class="account-chip"><span class="account-avatar" id="accountInitials">CF</span><span><strong id="accountName">Loading account…</strong><small id="accountEmail"></small></span></div>
+                </div>
+            </header>
+
+            <div class="institution-content">
+                <div id="overviewPage" class="institution-page">
+                <section id="overview" class="welcome-panel">
+                    <div><span class="welcome-kicker" data-i18n="reportManagement">CIVIC FIX · REPORT MANAGEMENT</span><h2 data-i18n="welcomeTitle">Make progress visible.</h2><p data-i18n="welcomeDescription">Review issues assigned to your institution and update citizens as your team works on them.</p></div>
+                    <span class="welcome-icon" aria-hidden="true">✓</span>
+                </section>
+
+                <section class="stat-grid" aria-label="Report summary" data-i18n-aria="reportSummary">
+                    <article class="stat-card"><span class="stat-icon total" aria-hidden="true">▤</span><small data-i18n="totalAssigned">Total assigned</small><strong id="totalCount">0</strong></article>
+                    <article class="stat-card"><span class="stat-icon pending" aria-hidden="true">◷</span><small data-i18n="awaitingAction">Awaiting action</small><strong id="pendingCount">0</strong></article>
+                    <article class="stat-card"><span class="stat-icon progress" aria-hidden="true">↻</span><small data-i18n="inProgress">In progress</small><strong id="progressCount">0</strong></article>
+                    <article class="stat-card"><span class="stat-icon resolved" aria-hidden="true">✓</span><small data-i18n="resolved">Resolved</small><strong id="resolvedCount">0</strong></article>
+                </section>
+
+                <section class="reports-section" id="assignedReports">
+                    <div class="section-heading"><div><span class="eyebrow" data-i18n="yourQueue">YOUR QUEUE</span><h2 data-i18n="assignedReports">Assigned reports</h2><p data-i18n="queueDescription">Open a report to review details and update its progress.</p></div><button type="button" id="refreshButton" class="refresh-button"><span aria-hidden="true">↻</span><span data-i18n="refresh">Refresh</span></button></div>
+                    <div class="report-toolbar">
+                        <label class="search-field"><span aria-hidden="true">⌕</span><input id="reportSearch" type="search" placeholder="Search reports, categories or locations" data-i18n-placeholder="searchPlaceholder" autocomplete="off"></label>
+                        <label class="filter-field"><span class="visually-hidden" data-i18n="filterStatus">Filter by status</span><select id="statusFilter"><option value="all" data-i18n="allStatuses">All statuses</option><option value="pending" data-i18n="awaitingAction">Awaiting action</option><option value="in_progress" data-i18n="inProgress">In progress</option><option value="resolved" data-i18n="resolved">Resolved</option></select></label>
+                    </div>
+                    <div id="reportList" class="report-list" aria-live="polite"><div class="loading-state"><span class="spinner"></span><span data-i18n="loadingReports">Loading assigned reports…</span></div></div>
+                </section>
+                </div>
+                <section class="institution-page institution-messages-section" id="inboxPage" hidden>
+                    <div class="section-heading"><div><span class="eyebrow" data-i18n="directMessages">DIRECT MESSAGES</span><h2 data-i18n="inbox">Inbox</h2><p data-i18n="inboxDescription">Message registered citizens, administrators and other institution users.</p></div><button type="button" id="refreshInboxButton" class="refresh-button"><span aria-hidden="true">↻</span><span data-i18n="refresh">Refresh</span></button></div>
+                    <div class="institution-inbox-layout">
+                        <aside class="institution-inbox-sidebar">
+                            <label for="institutionUserSearch" data-i18n="findPeople">Find people</label>
+                            <input id="institutionUserSearch" type="search" maxlength="80" autocomplete="off" placeholder="Search name or username…" data-i18n-placeholder="peopleSearchPlaceholder">
+                            <div id="institutionSearchResults" class="institution-people-list" aria-live="polite"></div>
+                            <h3 data-i18n="conversations">Conversations</h3>
+                            <div id="institutionConversationList" class="institution-people-list" aria-live="polite"><p class="inbox-list-empty" data-i18n="loadingConversations">Loading conversations…</p></div>
+                        </aside>
+                        <section class="institution-chat" aria-label="Message conversation">
+                            <div id="institutionInboxEmpty" class="institution-chat-empty" data-i18n="chooseConversation">Choose someone to start a conversation.</div>
+                            <div id="institutionActiveChat" hidden>
+                                <header id="institutionChatHeader" class="institution-chat-header"></header>
+                                <div id="institutionMessages" class="institution-messages" aria-live="polite"></div>
+                                <form id="institutionCompose" class="institution-compose">
+                                    <label class="visually-hidden" for="institutionMessageInput" data-i18n="writeMessage">Write a message</label>
+                                    <textarea id="institutionMessageInput" maxlength="2000" required placeholder="Write a message…" data-i18n-placeholder="writeMessage"></textarea>
+                                    <button type="submit" class="refresh-button institution-send-button" data-i18n="send">Send</button>
+                                </form>
+                            </div>
+                        </section>
+                    </div>
+                </section>
+                <section class="institution-page institution-notifications-section" id="notificationsPage" hidden>
+                    <div class="section-heading"><div><span class="eyebrow" data-i18n="updates">UPDATES</span><h2 data-i18n="notifications">Notifications</h2><p data-i18n="notificationDescription">Recent messages from registered users appear here.</p></div><button type="button" id="refreshNotificationsButton" class="refresh-button"><span aria-hidden="true">↻</span><span data-i18n="refresh">Refresh</span></button></div>
+                    <div id="institutionNotificationList" class="institution-notification-list" aria-live="polite"><div class="empty-state" data-i18n="loadingNotifications">Loading notifications…</div></div>
+                </section>
+                <footer class="institution-footer"><span>© 2026 Civic Fix</span><span data-i18n="footerMessage">Working together for better communities</span></footer>
+            </div>
+        </main>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <script src="js/institution.js" defer></script>
+</body>
+</html>
