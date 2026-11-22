@@ -1,12 +1,19 @@
+
 node_modules/
-.env
-uploads/
-.DS_Store
-Thumbs.db
-env
-config/env
+
+# Environment files and secrets
 .env
 .env.*
 !.env.example
-node_modules/
+env/
+config/env/
+
+# Aiven SSL certificates
+certs/
+
+# Uploaded user files
 uploads/
+
+# Operating system files
+.DS_Store
+Thumbs.db
