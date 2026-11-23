@@ -14,7 +14,7 @@ if (configured) {
     });
 }
 
-async function uploadLocalImage(localPath, folder, publicId) {
+async function uploadLocalImage(localPath, folder, publicId, uploadOptions = {}) {
     if (!configured) {
         if (process.env.NODE_ENV === "production") {
             throw new Error("Cloud image storage is not configured.");
@@ -26,7 +26,7 @@ async function uploadLocalImage(localPath, folder, publicId) {
         folder: `civic-fix/${folder}`,
         public_id: publicId,
         resource_type: "image",
-        overwrite: false,
+        overwrite: uploadOptions.overwrite === true,
         unique_filename: false
     });
 
