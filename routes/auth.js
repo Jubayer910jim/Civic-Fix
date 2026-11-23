@@ -281,6 +281,15 @@ router.post("/register", async (req, res) => {
 });
 
 // POST /api/auth/google - verify a Google ID token and create/sign in a citizen.
+router.get("/google/config", (req, res) => {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+        return res.status(503).json({ success: false, message: "Google sign-in is not configured on the server." });
+    }
+    res.set("Cache-Control", "no-store");
+    return res.json({ success: true, clientId });
+});
+
 router.post("/google", async (req, res) => {
     const { credential } = req.body || {};
     const clientId = process.env.GOOGLE_CLIENT_ID;
