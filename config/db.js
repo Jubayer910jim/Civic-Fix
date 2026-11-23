@@ -8,8 +8,8 @@ require("dotenv").config();
 let ssl;
 
 if (process.env.DB_SSL === "true") {
-    // Render supplies the certificate as environment-variable text.
-    // Local development uses the certificate file.
+    // Render should receive the Aiven CA certificate through DB_SSL_CA.
+    // Local development may use the certificate file instead.
     const ca = process.env.DB_SSL_CA
         ? process.env.DB_SSL_CA.replace(/\\n/g, "\n")
         : fs.readFileSync(
