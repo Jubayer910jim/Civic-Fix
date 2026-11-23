@@ -22,6 +22,7 @@ const multer = require("multer");
 require("dotenv").config();
 
 const db = require("./config/db");
+const { uploadLocalImage, destroyImage, publicIdFromUrl } = require("./config/cloudinary");
 
 
 
@@ -1678,7 +1679,8 @@ app.put(
     profileUpload.single("profileImage"),
     async (req, res) => {
         const userId = getLoggedInUserId(req);
-        const newImagePath = req.file ? `/uploads/profiles/${req.file.filename}` : null;
+        let newImagePath = null;
+        let newImageAsset = null;
 
         try {
             const fullName = typeof req.body.fullName === "string" ? req.body.fullName.trim() : "";
@@ -1781,6 +1783,18 @@ app.put(
                 }
             }
 
+            if (req.file) {
+                newImageAsset = await uploadLocalImage(
+                    req.file.path,
+                    "profiles",
+                    path.parse(req.file.filename).name
+                );
+                newImagePath = newImageAsset
+                    ? newImageAsset.url
+                    : "/uploads/profiles/" + req.file.filename;
+                if (newImageAsset) await fs.promises.unlink(req.file.path).catch(() => {});
+            }
+
             const passwordHash = newPassword
                 ? await bcrypt.hash(newPassword, 12)
                 : current.password_hash;
@@ -1809,10 +1823,15 @@ app.put(
             req.session.user.phone = phone;
 
             const oldImage = current.profile_image;
-            if (newImagePath && oldImage && oldImage.startsWith("/uploads/profiles/")) {
-                const oldPath = path.resolve(uploadsDirectory, oldImage.slice("/uploads/".length));
-                if (oldPath.startsWith(profilesUploadDirectory + path.sep)) {
-                    await fs.promises.unlink(oldPath).catch(() => {});
+            if (newImagePath && oldImage) {
+                const oldPublicId = publicIdFromUrl(oldImage);
+                if (oldPublicId) {
+                    await destroyImage(oldPublicId);
+                } else if (oldImage.startsWith("/uploads/profiles/")) {
+                    const oldPath = path.resolve(uploadsDirectory, oldImage.slice("/uploads/".length));
+                    if (oldPath.startsWith(profilesUploadDirectory + path.sep)) {
+                        await fs.promises.unlink(oldPath).catch(() => {});
+                    }
                 }
             }
 
@@ -1831,6 +1850,7 @@ app.put(
             });
         } catch (error) {
             if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+            if (newImageAsset) await destroyImage(newImageAsset.publicId);
             console.error("Citizen profile update error:", error.message);
             return res.status(500).json({ success: false, message: "Unable to update your profile." });
         }
@@ -1955,6 +1975,8 @@ app.post(
     upload.array("images", 3),
     async (req, res) => {
         const uploadedFiles = req.files || [];
+        const cloudAssets = [];
+        let storedUploads = [];
         let connection;
         const reject = (status, message) => {
             deleteUploadedFiles(uploadedFiles);
@@ -1986,9 +2008,20 @@ app.post(
                     return reject(400, "The location coordinates are invalid.");
             }
 
-            const imagePath = uploadedFiles.length
-                ? "/uploads/reports/" + uploadedFiles[0].filename
-                : null;
+            for (const file of uploadedFiles) {
+                const asset = await uploadLocalImage(
+                    file.path,
+                    "reports",
+                    path.parse(file.filename).name
+                );
+                if (asset) cloudAssets.push(asset.publicId);
+                storedUploads.push({
+                    imagePath: asset ? asset.url : "/uploads/reports/" + file.filename,
+                    storedFilename: asset ? asset.publicId : file.filename
+                });
+            }
+            if (cloudAssets.length) deleteUploadedFiles(uploadedFiles);
+            const imagePath = storedUploads[0]?.imagePath || null;
 
             connection = await db.getConnection();
             await connection.beginTransaction();
@@ -2007,15 +2040,15 @@ app.post(
                     `INSERT INTO report_images
                         (report_id, image_path, original_filename, stored_filename, mime_type, file_size, image_order, ai_relevance_status)
                      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-                    [reportId, "/uploads/reports/" + file.filename, file.originalname,
-                        file.filename, file.mimetype, file.size, index + 1]
+                    [reportId, storedUploads[index].imagePath, file.originalname,
+                        storedUploads[index].storedFilename, file.mimetype, file.size, index + 1]
                 );
             }
             await connection.commit();
 
-            const images = uploadedFiles.map(file => ({
-                image_path: "/uploads/reports/" + file.filename,
-                image_url: "/uploads/reports/" + file.filename,
+            const images = uploadedFiles.map((file, index) => ({
+                image_path: storedUploads[index].imagePath,
+                image_url: storedUploads[index].imagePath,
                 original_filename: file.originalname
             }));
             return res.status(201).json({
@@ -2038,6 +2071,7 @@ app.post(
         } catch (error) {
             if (connection) await connection.rollback().catch(() => {});
             deleteUploadedFiles(uploadedFiles);
+            for (const publicId of cloudAssets) await destroyImage(publicId);
             console.error("Citizen report submission error:", error.message);
             return res.status(500).json({
                 success: false,
@@ -2062,18 +2096,24 @@ app.delete("/api/citizen/reports/:reportId", requireRole("citizen"), async (req,
             await connection.rollback();
             return res.status(404).json({ success: false, message: "Report not found." });
         }
-        const [images] = await connection.query("SELECT image_path FROM report_images WHERE report_id = ?", [reportId]);
+        const [images] = await connection.query("SELECT image_path, stored_filename FROM report_images WHERE report_id = ?", [reportId]);
         await connection.query("DELETE FROM ai_analyses WHERE report_id = ?", [reportId]);
         await connection.query("DELETE FROM report_comments WHERE report_id = ?", [reportId]);
         await connection.query("DELETE FROM report_images WHERE report_id = ?", [reportId]);
         await connection.query("DELETE FROM reports WHERE report_id = ? AND user_id = ?", [reportId, ownerId]);
         await connection.commit();
-        for (const image of [...images, { image_path: reports[0].image_path }]) {
-            const relative = String(image.image_path || "").replace(/^\/+/, "");
+        const remoteIds = new Set();
+        for (const image of [...images, { image_path: reports[0].image_path, stored_filename: null }]) {
+            const storedPublicId = String(image.stored_filename || "");
+            const remoteId = storedPublicId.startsWith("civic-fix/") ? storedPublicId : publicIdFromUrl(image.image_path);
+            if (remoteId) { remoteIds.add(remoteId); continue; }
+            const rawPath = String(image.image_path || "");
+            const relative = rawPath.startsWith("/") ? rawPath.slice(1) : rawPath;
             if (!relative.startsWith("uploads/reports/")) continue;
-            const absolute = path.resolve(__dirname, "public", relative);
-            if (absolute.startsWith(path.resolve(__dirname, "public", "uploads", "reports") + path.sep) && fs.existsSync(absolute)) fs.unlinkSync(absolute);
+            const absolute = path.resolve(uploadsDirectory, relative.slice("uploads/".length));
+            if (absolute.startsWith(reportsUploadDirectory + path.sep) && fs.existsSync(absolute)) fs.unlinkSync(absolute);
         }
+        for (const publicId of remoteIds) await destroyImage(publicId);
         return res.json({ success: true, message: "Report deleted." });
     } catch (error) {
         if (connection) await connection.rollback().catch(() => {});
