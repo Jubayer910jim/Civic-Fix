@@ -16,6 +16,7 @@ const emailInput =
 
 let loginMethod = "email";
 let currentLanguage = localStorage.getItem("civicFixLanguage") === "bn" ? "bn" : "en";
+let googleLoginInitialized = false;
 const loginTranslations = {
     en: {
         back: "← Back to homepage", email: "Email Address", phone: "Bangladesh Phone Number",
@@ -368,10 +369,7 @@ function applyLoginLanguage() {
         identifierLabel.textContent = t("institutionAccountEmail");
         document.getElementById("institutionPickerLabel").textContent = t("institutionPickerLabel");
     }
-    if (window.google && window.google.accounts && window.google.accounts.id && selectedRole === "citizen") {
-        googleLoginButton.replaceChildren();
-        window.google.accounts.id.renderButton(googleLoginButton, { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: 320, locale: currentLanguage });
-    }
+    renderGoogleLoginButton();
 }
 
 document.getElementById("languageToggle").addEventListener("click", () => {
@@ -727,8 +725,6 @@ loginForm.addEventListener(
 // GOOGLE SIGN-IN WITH EMAIL OTP
 // ==========================================
 
-const GOOGLE_CLIENT_ID = "739688046500-notkt1q3m2ptdaq7eej1kebkj3g7mqbl.apps.googleusercontent.com";
-
 function showLoginOtpMessage(message, type = "error") {
     loginOtpMessage.textContent = message;
     loginOtpMessage.className = "login-message show " + type;
@@ -771,21 +767,36 @@ async function handleGoogleLoginCredential(response) {
     }
 }
 
-function initializeGoogleLogin() {
+function renderGoogleLoginButton() {
+    if (!googleLoginInitialized || selectedRole !== "citizen" || !window.google?.accounts?.id) return;
+    googleLoginButton.replaceChildren();
+    window.google.accounts.id.renderButton(
+        googleLoginButton,
+        { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: 320, locale: currentLanguage }
+    );
+}
+
+async function initializeGoogleLogin() {
     if (selectedRole !== "citizen") return;
     if (!window.google || !window.google.accounts || !window.google.accounts.id) {
         window.setTimeout(initializeGoogleLogin, 150);
         return;
     }
-
-    window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleLoginCredential
-    });
-    window.google.accounts.id.renderButton(
-        googleLoginButton,
-        { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: 320, locale: currentLanguage }
-    );
+    try {
+        const response = await fetch("/api/auth/google/config", { credentials: "same-origin" });
+        const config = await response.json().catch(() => ({}));
+        if (!response.ok || !config.success || !config.clientId) {
+            throw new Error(config.message || "Google sign-in is not configured on the server.");
+        }
+        window.google.accounts.id.initialize({
+            client_id: config.clientId,
+            callback: handleGoogleLoginCredential
+        });
+        googleLoginInitialized = true;
+        renderGoogleLoginButton();
+    } catch (error) {
+        showMessage(error.message || t("googleFailed"));
+    }
 }
 
 initializeGoogleLogin();
