@@ -10,7 +10,8 @@
     "dev": "nodemon server.js",
     "seed:institutions": "node scripts/seedInstitutionAccounts.js",
     "seed:authority": "node scripts/seedAuthorityAccount.js",
-    "reset:institution-passwords": "node scripts/seedInstitutionAccounts.js --reset-passwords"
+    "reset:institution-passwords": "node scripts/seedInstitutionAccounts.js --reset-passwords",
+    "migrate:uploads:cloudinary": "node scripts/migrateUploadsToCloudinary.js"
   },
   "keywords": [],
   "author": "",
@@ -35,4 +36,3 @@
     "bcrypt@6.0.0": true
   }
 }
-
