@@ -61,13 +61,19 @@ function publicIdFromUrl(value) {
         if (uploadIndex < 0) return null;
 
         const afterUpload = segments.slice(uploadIndex + 1);
-        const versionIndex = afterUpload.findIndex(segment => /^v\\d+$/.test(segment));
+        const versionIndex = afterUpload.findIndex(segment =>
+            segment.startsWith("v") &&
+            segment.length > 1 &&
+            [...segment.slice(1)].every(character => character >= "0" && character <= "9")
+        );
         if (versionIndex < 0) return null;
 
         const assetPath = afterUpload.slice(versionIndex + 1);
         if (!assetPath.length) return null;
 
-        assetPath[assetPath.length - 1] = assetPath[assetPath.length - 1].replace(/\\.[^.]+$/, "");
+        const lastSegment = assetPath[assetPath.length - 1];
+        const extensionIndex = lastSegment.lastIndexOf(".");
+        if (extensionIndex > 0) assetPath[assetPath.length - 1] = lastSegment.slice(0, extensionIndex);
         return assetPath.join("/");
     } catch {
         return null;
