@@ -452,6 +452,14 @@ router.post("/google", async (req, res) => {
             message: error && error.message ? error.message : String(error),
             code: error && error.code,
             sqlState: error && error.sqlState,
+            causes: error && Array.isArray(error.errors)
+                ? error.errors.map(cause => ({
+                    message: cause.message,
+                    code: cause.code,
+                    address: cause.address,
+                    port: cause.port
+                }))
+                : undefined,
             stack: error && error.stack
         });
         return res.status(500).json({ success: false, message: "Unable to sign in with Google. Please try again." });
