@@ -811,8 +811,8 @@ function renderNewsfeed() {
 
     if (!reports.length) {
         list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(getCurrentText(
-            newsfeedReports.length ? "No nearby reports match this status." : "No geolocated reports were found in this area yet.",
-            newsfeedReports.length ? "এই অবস্থার কাছাকাছি কোনো অভিযোগ নেই।" : "এই এলাকায় অবস্থান-চিহ্নিত কোনো অভিযোগ নেই।"
+            newsfeedReports.length ? "No reports match this status." : "No reports have been submitted yet.",
+            newsfeedReports.length ? "এই অবস্থার কোনো প্রতিবেদন নেই।" : "এখনও কোনো প্রতিবেদন জমা হয়নি।"
         ))}</div>`;
     } else {
         list.innerHTML = reports.map(report => {
@@ -829,6 +829,11 @@ function renderNewsfeed() {
             const description = String(report.description || "");
             const canExpandDescription = description.length > 180;
             const isoDate = Number.isNaN(new Date(report.created_at).getTime()) ? "" : new Date(report.created_at).toISOString();
+            const isGeoLocated = report.latitude != null && report.longitude != null;
+            const hasDistance = report.distance_km != null && Number.isFinite(Number(report.distance_km));
+            const distanceText = hasDistance
+                ? `${Number(report.distance_km).toFixed(1)} km away`
+                : getCurrentText(isGeoLocated ? "Location pinned" : "Location not pinned", isGeoLocated ? "মানচিত্রে অবস্থান আছে" : "অবস্থান যোগ করা হয়নি");
             return `
                 <article class="newsfeed-report" data-report-id="${reportId}">
                     <div class="newsfeed-report-topline">
@@ -845,7 +850,7 @@ function renderNewsfeed() {
                     <div class="newsfeed-report-heading">
                         <div><small>${escapeHTML(report.category || getCurrentText("Community report", "কমিউনিটি অভিযোগ"))}</small>
                         <h3>${escapeHTML(report.title || getCurrentText("Untitled report", "শিরোনামহীন অভিযোগ"))}</h3></div>
-                        <span class="newsfeed-distance">${escapeHTML(Number(report.distance_km || 0).toFixed(1))} km</span>
+                        <span class="newsfeed-distance">${escapeHTML(distanceText)}</span>
                     </div>
                     <p class="newsfeed-description" data-newsfeed-description="${reportId}">${escapeHTML(description)}</p>
                     ${canExpandDescription ? `<button type="button" class="newsfeed-read-more" data-newsfeed-expand="${reportId}" aria-expanded="false">${escapeHTML(getCurrentText("Read more", "আরও দেখুন"))}</button>` : ""}
@@ -884,6 +889,7 @@ function renderNewsfeed() {
     communityMapMarkers.forEach(marker => marker.remove());
     communityMapMarkers = [];
     communityReportMarkers.clear();
+    const reportMarkers = [];
     if (communityRadiusCircle) communityRadiusCircle.remove();
     if (communitySearchMarker) {
         communitySearchMarker.remove();
@@ -915,6 +921,7 @@ function renderNewsfeed() {
     }
 
     reports.forEach(report => {
+        if (report.latitude == null || report.longitude == null) return;
         const latitude = Number(report.latitude);
         const longitude = Number(report.longitude);
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
@@ -937,9 +944,15 @@ function renderNewsfeed() {
         });
         communityReportMarkers.set(reportId, marker);
         communityMapMarkers.push(marker);
+        reportMarkers.push(marker);
     });
 
-    if (communityRadiusCircle && reports.length) {
+    if (reportMarkers.length) {
+        const reportBounds = L.featureGroup(reportMarkers).getBounds();
+        if (reportBounds.isValid()) {
+            communityMap.fitBounds(reportBounds, { padding: [28, 28], maxZoom: 14 });
+        }
+    } else if (center && communityRadiusCircle) {
         communityMap.fitBounds(communityRadiusCircle.getBounds(), { padding: [28, 28], maxZoom: 14 });
     }
     window.setTimeout(() => communityMap && communityMap.invalidateSize(), 80);
@@ -993,7 +1006,7 @@ async function searchNewsfeedMap(event) {
 
         newsfeedAreaLocation = { latitude: Number(place.lat), longitude: Number(place.lon) };
         const label = place.name || place.display_name || query;
-        status.textContent = getCurrentText(`Showing reports near ${label}`, `${label} এলাকার প্রতিবেদন দেখানো হচ্ছে`);
+        status.textContent = getCurrentText(`Map centered near ${label}; all citizen reports remain listed.`, `${label} এলাকায় মানচিত্র দেখানো হচ্ছে; নাগরিকদের সব প্রতিবেদন তালিকায় থাকবে।`);
         ensureCommunityMap();
         communityMap.setView([newsfeedAreaLocation.latitude, newsfeedAreaLocation.longitude], 14);
         await loadNewsfeed();
@@ -1009,32 +1022,31 @@ async function loadNewsfeed() {
     const list = $("newsfeedList");
     if (!list) return;
     const center = getNewsfeedCenter();
-    if (!center) {
-        list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(getCurrentText(
-            "Use your location or search for a place to see nearby reports.",
-            "কাছের প্রতিবেদন দেখতে আপনার অবস্থান ব্যবহার করুন বা কোনো স্থান খুঁজুন।"
-        ))}</div>`;
-        if ($("newsfeedMapStatus")) $("newsfeedMapStatus").hidden = false;
-        ensureCommunityMap();
-        return;
-    }
-    const radiusKm = Number($("newsfeedRadius")?.value || 10);
-    list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(getCurrentText("Loading nearby reports…", "কাছের প্রতিবেদন লোড হচ্ছে…"))}</div>`;
+    list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(getCurrentText("Loading all community reports…", "কমিউনিটির সব প্রতিবেদন লোড হচ্ছে…"))}</div>`;
     try {
-        const query = new URLSearchParams({
-            lat: String(center.latitude),
-            lng: String(center.longitude),
-            radiusKm: String(radiusKm)
-        });
-        const data = await apiRequest(`${API_URL}/newsfeed?${query.toString()}`);
+        const query = new URLSearchParams();
+        if (center) {
+            query.set("lat", String(center.latitude));
+            query.set("lng", String(center.longitude));
+        }
+        const queryString = query.toString();
+        const data = await apiRequest(`${API_URL}/newsfeed${queryString ? `?${queryString}` : ""}`);
         newsfeedReports = Array.isArray(data.reports) ? data.reports : [];
         hasLoadedNewsfeed = true;
         const mapStatus = $("newsfeedMapStatus");
-        if (mapStatus) mapStatus.hidden = true;
+        if (mapStatus) {
+            mapStatus.hidden = Boolean(center);
+            if (!center) {
+                mapStatus.textContent = getCurrentText(
+                    "All citizen reports are listed. Only reports with saved coordinates appear as map pins.",
+                    "নাগরিকদের সব প্রতিবেদন তালিকায় আছে। সংরক্ষিত অবস্থান থাকা প্রতিবেদনগুলোই মানচিত্রে দেখা যাবে।"
+                );
+            }
+        }
         renderNewsfeed();
     } catch (error) {
-        console.error("Unable to load nearby reports:", error);
-        list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(error.message || getCurrentText("Unable to load nearby reports.", "কাছের প্রতিবেদন লোড করা যায়নি।"))}</div>`;
+        console.error("Unable to load community reports:", error);
+        list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(error.message || getCurrentText("Unable to load community reports.", "কমিউনিটির প্রতিবেদন লোড করা যায়নি।"))}</div>`;
     }
 }
 if ($("newsfeedMapSearch")) {
