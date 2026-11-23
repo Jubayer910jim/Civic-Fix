@@ -22,7 +22,7 @@ const multer = require("multer");
 require("dotenv").config();
 
 const db = require("./config/db");
-const { uploadLocalImage, destroyImage, publicIdFromUrl } = require("./config/cloudinary");
+const { configured: cloudImageStorageConfigured, uploadLocalImage, destroyImage, publicIdFromUrl } = require("./config/cloudinary");
 
 
 
@@ -1783,6 +1783,10 @@ app.put(
                 }
             }
 
+            if (req.file && !cloudImageStorageConfigured && process.env.NODE_ENV === "production") {
+                await fs.promises.unlink(req.file.path).catch(() => {});
+                return res.status(503).json({ success: false, message: "Profile image storage is not configured yet." });
+            }
             if (req.file) {
                 newImageAsset = await uploadLocalImage(
                     req.file.path,
@@ -2008,6 +2012,9 @@ app.post(
                     return reject(400, "The location coordinates are invalid.");
             }
 
+            if (uploadedFiles.length && !cloudImageStorageConfigured && process.env.NODE_ENV === "production") {
+                return reject(503, "Report image storage is not configured yet.");
+            }
             for (const file of uploadedFiles) {
                 const asset = await uploadLocalImage(
                     file.path,
