@@ -10,7 +10,8 @@ const dryRun = process.argv.includes("--dry-run");
 
 function getLegacyUploadInfo(value) {
     if (typeof value !== "string" || !value.trim()) return null;
-    const normalized = value.trim().replace(/\\\\/g, "/").replace(/^\\/+/, "");
+    let normalized = value.trim().split(String.fromCharCode(92)).join("/");
+    while (normalized.startsWith("/")) normalized = normalized.slice(1);
     if (!normalized.startsWith("uploads/")) return null;
 
     const relativePath = normalized.slice("uploads/".length);
@@ -29,7 +30,7 @@ function getLegacyUploadInfo(value) {
 
 async function main() {
     if (!configured) throw new Error("Set the Cloudinary environment variables first.");
-    if (!/aivencloud\\.com$/i.test(process.env.DB_HOST || "")) {
+    if (!String(process.env.DB_HOST || "").toLowerCase().endsWith("aivencloud.com")) {
         throw new Error("Point this migration at the live Aiven database using DB_HOST.");
     }
 
