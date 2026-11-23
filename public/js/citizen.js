@@ -1220,16 +1220,16 @@ function getSafeReportImageUrl(image) {
 
     if (rawPath.startsWith("/")) return rawPath;
 
-    if (/^https?:\/\//i.test(rawPath)) {
+    if (rawPath.startsWith("https://") || rawPath.startsWith("http://")) {
         try {
             const parsed = new URL(rawPath, window.location.origin);
-            if (parsed.origin !== window.location.origin) return "";
-            return parsed.pathname + parsed.search;
+            if (parsed.origin === window.location.origin) return parsed.pathname + parsed.search;
+            if (parsed.protocol === "https:" && parsed.hostname.endsWith(".res.cloudinary.com")) return parsed.href;
+            return "";
         } catch (error) {
             return "";
         }
     }
-
     if (rawPath.startsWith("uploads/")) {
         return `/${rawPath}`;
     }
