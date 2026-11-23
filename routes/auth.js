@@ -448,7 +448,12 @@ router.post("/google", async (req, res) => {
             message: "A Google registration verification code was sent to your email."
         });
     } catch (error) {
-        console.error("Google sign-in error:", error.message);
+        console.error("Google sign-in error:", {
+            message: error && error.message ? error.message : String(error),
+            code: error && error.code,
+            sqlState: error && error.sqlState,
+            stack: error && error.stack
+        });
         return res.status(500).json({ success: false, message: "Unable to sign in with Google. Please try again." });
     } finally {
         if (connection) connection.release();
@@ -777,3 +782,4 @@ router.get("/pending-registration", (req, res) => {
 });
 
 module.exports = router;
+
