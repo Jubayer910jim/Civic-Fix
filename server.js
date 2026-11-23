@@ -2448,14 +2448,17 @@ app.get(
     "/api/citizen/newsfeed",
     requireRole("citizen"),
     async (req, res) => {
-        const latitude = Number(req.query.lat);
-        const longitude = Number(req.query.lng);
+        const candidateLatitude = req.query.lat == null ? null : Number(req.query.lat);
+        const candidateLongitude = req.query.lng == null ? null : Number(req.query.lng);
+        const hasCenter =
+            Number.isFinite(candidateLatitude) && candidateLatitude >= -90 && candidateLatitude <= 90 &&
+            Number.isFinite(candidateLongitude) && candidateLongitude >= -180 && candidateLongitude <= 180;
+        const latitude = hasCenter ? candidateLatitude : null;
+        const longitude = hasCenter ? candidateLongitude : null;
         const radiusKm = Number(req.query.radiusKm || 10);
 
-        if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
-            !Number.isFinite(longitude) || longitude < -180 || longitude > 180 ||
-            !Number.isFinite(radiusKm) || radiusKm < 1 || radiusKm > 50) {
-            return res.status(400).json({ success: false, message: "Provide valid coordinates and a radius between 1 and 50 km." });
+        if (!Number.isFinite(radiusKm) || radiusKm < 1 || radiusKm > 50) {
+            return res.status(400).json({ success: false, message: "Choose a map radius between 1 and 50 km." });
         }
 
         try {
@@ -2476,21 +2479,26 @@ app.get(
                     r.status,
                     r.created_at,
                     r.updated_at,
-                    ROUND(6371 * ACOS(LEAST(1, GREATEST(-1,
-                        SIN(RADIANS(?)) * SIN(RADIANS(r.latitude)) +
-                        COS(RADIANS(?)) * COS(RADIANS(r.latitude)) *
-                        COS(RADIANS(r.longitude) - RADIANS(?))
-                    ))), 2) AS distance_km,
+                    CASE
+                        WHEN ? IS NOT NULL AND ? IS NOT NULL
+                            AND r.latitude IS NOT NULL AND r.longitude IS NOT NULL
+                        THEN ROUND(6371 * ACOS(LEAST(1, GREATEST(-1,
+                            SIN(RADIANS(?)) * SIN(RADIANS(r.latitude)) +
+                            COS(RADIANS(?)) * COS(RADIANS(r.latitude)) *
+                            COS(RADIANS(r.longitude) - RADIANS(?))
+                        ))), 2)
+                        ELSE NULL
+                    END AS distance_km,
                     (SELECT COUNT(*) FROM report_comments rc WHERE rc.report_id = r.report_id) AS comment_count
                 FROM reports r
                 INNER JOIN users u ON u.user_id = r.user_id
                 WHERE u.role = 'citizen'
                     AND u.account_status = 'active'
-                    AND r.latitude IS NOT NULL
-                    AND r.longitude IS NOT NULL
-                HAVING distance_km <= ?
-                ORDER BY r.created_at DESC, r.report_id DESC
-            `, [latitude, latitude, longitude, radiusKm]);
+                ORDER BY
+                    CASE WHEN distance_km IS NULL THEN 1 ELSE 0 END,
+                    distance_km ASC,
+                    r.created_at DESC, r.report_id DESC
+            `, [latitude, longitude, latitude, latitude, longitude]);
 
             await addImagesToReports(reports);
             for (const report of reports) {
