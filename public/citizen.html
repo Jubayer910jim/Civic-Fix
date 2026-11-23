@@ -179,8 +179,8 @@
                                 <span data-en="YOUR NEIGHBOURHOOD" data-bn="আপনার প্রতিবেশ">YOUR NEIGHBOURHOOD</span>
                             </div>
                             <h1 data-en="Community newsfeed" data-bn="কমিউনিটি নিউজফিড">Community newsfeed</h1>
-                            <p data-en="Reports near you, with updates from your community."
-                               data-bn="আপনার এলাকার অভিযোগ ও কমিউনিটির আপডেট দেখুন।">Reports near you, with updates from your community.</p>
+                            <p data-en="All reports from your community."
+                               data-bn="আপনার কমিউনিটির সব প্রতিবেদন দেখুন।">All reports from your community.</p>
                         </div>
                         <button type="button" class="location-button" id="newsfeedLocateButton"
                                 data-en="Use my location" data-bn="আমার অবস্থান ব্যবহার করুন">Use my location</button>
@@ -188,7 +188,7 @@
 
                     <div class="newsfeed-controls">
                         <label>
-                            <span data-en="Nearby radius" data-bn="এলাকার দূরত্ব">Nearby radius</span>
+                            <span data-en="Map radius guide" data-bn="মানচিত্রের দূরত্ব নির্দেশক">Map radius guide</span>
                             <select id="newsfeedRadius">
                                 <option value="5">5 km</option>
                                 <option value="10" selected>10 km</option>
@@ -210,24 +210,24 @@
                                 data-en="Refresh reports" data-bn="অভিযোগ রিফ্রেশ করুন">Refresh reports</button>
                     </div>
 
-                    <p class="newsfeed-privacy-note" data-en="Your location is used once to find nearby reports. Civic Fix does not track you in the background."
-                       data-bn="আপনার কাছের অভিযোগ খুঁজতে অবস্থান একবার ব্যবহার করা হয়। Civic Fix পেছনে আপনাকে অনুসরণ করে না।">
-                        Your location is used once to find nearby reports. Civic Fix does not track you in the background.
+                    <p class="newsfeed-privacy-note" data-en="All citizen reports are listed. Your location is used only when you choose it to center the map and calculate distances."
+                       data-bn="নাগরিকদের সব প্রতিবেদন তালিকায় আছে। আপনি চাইলে অবস্থান শুধু মানচিত্র কেন্দ্র ও দূরত্ব দেখাতে ব্যবহৃত হয়।">
+                        All citizen reports are listed. Your location is used only when you choose it to center the map and calculate distances.
                     </p>
 
                     <div class="newsfeed-layout">
-                        <section class="newsfeed-reports-panel" aria-label="Nearby community reports">
+                        <section class="newsfeed-reports-panel" aria-label="Community reports">
                             <div class="newsfeed-list-heading">
                                 <div>
                                     <h2 data-en="Service requests" data-bn="সেবা অনুরোধ">Service requests</h2>
-                                    <p data-en="Community reports near your location" data-bn="আপনার কাছাকাছি এলাকার নাগরিক প্রতিবেদন">Community reports near your location</p>
+                                    <p data-en="Reports from registered citizens" data-bn="নিবন্ধিত নাগরিকদের প্রতিবেদন">Reports from registered citizens</p>
                                 </div>
                                 <span><strong id="newsfeedCount">0</strong><small data-en=" reports" data-bn="টি প্রতিবেদন"> reports</small></span>
                             </div>
                             <div id="newsfeedList" class="newsfeed-list" aria-live="polite"></div>
                         </section>
-                        <section class="panel newsfeed-map-panel" aria-label="Nearby report map">
-                            <div id="newsfeedMap" aria-label="Map showing nearby reports"></div>
+                        <section class="panel newsfeed-map-panel" aria-label="Community report map">
+                            <div id="newsfeedMap" aria-label="Map showing reports with saved coordinates"></div>
                             <form id="newsfeedMapSearch" class="newsfeed-map-search" role="search">
                                 <label class="visually-hidden" for="newsfeedMapSearchInput">Search the map by location or address</label>
                                 <span class="newsfeed-map-search-icon" aria-hidden="true"></span>
@@ -237,9 +237,9 @@
                             <p id="newsfeedMapSearchStatus" class="newsfeed-map-search-status" role="status" aria-live="polite" hidden></p>
                             <button type="button" class="newsfeed-map-locate" id="newsfeedMapLocate" aria-label="Center map on my location" title="My location"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2"></circle><path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path></svg></button>
                             <div id="newsfeedMapStatus" class="newsfeed-map-status" role="status">
-                                <span data-en="Search for a place or use your location to view nearby reports."
-                                      data-bn="ম্যাপে কাছাকাছি প্রতিবেদন দেখতে আপনার অবস্থান শেয়ার করুন।">
-                                    Search for a place or use your location to view nearby reports.
+                                <span data-en="All reports are listed. Only reports with saved coordinates appear as map pins."
+                                      data-bn="সব প্রতিবেদন তালিকায় আছে। সংরক্ষিত অবস্থান থাকলে প্রতিবেদন মানচিত্রে পিন হিসেবে দেখা যায়।">
+                                    All reports are listed. Only reports with saved coordinates appear as map pins.
                                 </span>
                             </div>
                         </section>
