@@ -2557,11 +2557,12 @@ app.get(
                 INNER JOIN users u ON u.user_id = r.user_id
                 WHERE u.role = 'citizen'
                     AND u.account_status = 'active'
+                HAVING (? IS NULL OR distance_km <= ?)
                 ORDER BY
                     CASE WHEN distance_km IS NULL THEN 1 ELSE 0 END,
                     distance_km ASC,
                     r.created_at DESC, r.report_id DESC
-            `, [latitude, longitude, latitude, latitude, longitude]);
+            `, [latitude, longitude, latitude, latitude, longitude, hasCenter ? radiusKm : null, radiusKm]);
 
             await addImagesToReports(reports);
             for (const report of reports) {

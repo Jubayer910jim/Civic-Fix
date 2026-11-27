@@ -24,6 +24,8 @@ let communitySearchMarker = null;
 let newsfeedAreaLocation = null;
 let lastNewsfeedGeocodeAt = 0;
 let newsfeedGeocodeCache = new Map();
+let newsfeedLocationIntentId = 0;
+let newsfeedLoadRequestId = 0;
 let communityRadiusCircle = null;
 let isCitizenAuthenticated = false;
 let serverRequestsLocationPermission = false;
@@ -811,8 +813,8 @@ function renderNewsfeed() {
 
     if (!reports.length) {
         list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(getCurrentText(
-            newsfeedReports.length ? "No reports match this status." : "No reports have been submitted yet.",
-            newsfeedReports.length ? "এই অবস্থার কোনো প্রতিবেদন নেই।" : "এখনও কোনো প্রতিবেদন জমা হয়নি।"
+            newsfeedReports.length ? "No reports match this status." : (getNewsfeedCenter() ? "No reports were found within " + Number($("newsfeedRadius")?.value || 10) + " km of this location." : "No reports have been submitted yet."),
+            newsfeedReports.length ? "এই অবস্থার কোনো প্রতিবেদন নেই।" : (getNewsfeedCenter() ? "এই অবস্থানের " + Number($("newsfeedRadius")?.value || 10) + " কিমির মধ্যে কোনো প্রতিবেদন নেই।" : "এখনও কোনো প্রতিবেদন জমা হয়নি।")
         ))}</div>`;
     } else {
         list.innerHTML = reports.map(report => {
@@ -947,13 +949,15 @@ function renderNewsfeed() {
         reportMarkers.push(marker);
     });
 
-    if (reportMarkers.length) {
+    // Keep the selected location centered and fit the map to the chosen radius.
+    // This keeps radius changes zooming out or in without fitting every report pin.
+    if (center && communityRadiusCircle) {
+        communityMap.fitBounds(communityRadiusCircle.getBounds(), { padding: [28, 28], maxZoom: 14 });
+    } else if (reportMarkers.length) {
         const reportBounds = L.featureGroup(reportMarkers).getBounds();
         if (reportBounds.isValid()) {
             communityMap.fitBounds(reportBounds, { padding: [28, 28], maxZoom: 14 });
         }
-    } else if (center && communityRadiusCircle) {
-        communityMap.fitBounds(communityRadiusCircle.getBounds(), { padding: [28, 28], maxZoom: 14 });
     }
     window.setTimeout(() => communityMap && communityMap.invalidateSize(), 80);
 }
@@ -976,6 +980,7 @@ function focusNewsfeedReport(reportId) {
 
 async function searchNewsfeedMap(event) {
     event.preventDefault();
+    const intentId = ++newsfeedLocationIntentId;
     const input = $("newsfeedMapSearchInput");
     const button = $("newsfeedMapSearch")?.querySelector('button[type="submit"]');
     const status = $("newsfeedMapSearchStatus");
@@ -996,6 +1001,7 @@ async function searchNewsfeedMap(event) {
             lastNewsfeedGeocodeAt = Date.now();
             const params = new URLSearchParams({ q: query });
             const data = await apiRequest(`${API_URL}/geocode?${params.toString()}`);
+            if (intentId !== newsfeedLocationIntentId) return;
             place = data.place;
             if (!place || !Number.isFinite(Number(place.lat)) || !Number.isFinite(Number(place.lon))) {
                 throw new Error(getCurrentText("No matching place was found. Try a nearby street or landmark.", "মিল পাওয়া যায়নি। কাছের রাস্তা বা স্থাপনার নাম দিয়ে চেষ্টা করুন।"));
@@ -1004,13 +1010,15 @@ async function searchNewsfeedMap(event) {
             newsfeedGeocodeCache.set(cacheKey, place);
         }
 
+        if (intentId !== newsfeedLocationIntentId) return;
         newsfeedAreaLocation = { latitude: Number(place.lat), longitude: Number(place.lon) };
         const label = place.name || place.display_name || query;
-        status.textContent = getCurrentText(`Map centered near ${label}; all citizen reports remain listed.`, `${label} এলাকায় মানচিত্র দেখানো হচ্ছে; নাগরিকদের সব প্রতিবেদন তালিকায় থাকবে।`);
+        status.textContent = getCurrentText("Showing reports within " + Number($("newsfeedRadius")?.value || 10) + " km of " + label + ".", label + " এলাকার " + Number($("newsfeedRadius")?.value || 10) + " কিমির মধ্যে প্রতিবেদন দেখানো হচ্ছে।");
         ensureCommunityMap();
-        communityMap.setView([newsfeedAreaLocation.latitude, newsfeedAreaLocation.longitude], 14);
+        communityMap.setView([newsfeedAreaLocation.latitude, newsfeedAreaLocation.longitude], 15);
         await loadNewsfeed();
     } catch (error) {
+        if (intentId !== newsfeedLocationIntentId) return;
         status.hidden = false;
         status.textContent = error.message || getCurrentText("Could not search for that place.", "স্থানটি খোঁজা যায়নি।");
     } finally {
@@ -1019,18 +1027,21 @@ async function searchNewsfeedMap(event) {
     }
 }
 async function loadNewsfeed() {
+    const requestId = ++newsfeedLoadRequestId;
     const list = $("newsfeedList");
     if (!list) return;
     const center = getNewsfeedCenter();
     list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(getCurrentText("Loading all community reports…", "কমিউনিটির সব প্রতিবেদন লোড হচ্ছে…"))}</div>`;
     try {
         const query = new URLSearchParams();
+        query.set("radiusKm", String(Number($("newsfeedRadius")?.value || 10)));
         if (center) {
             query.set("lat", String(center.latitude));
             query.set("lng", String(center.longitude));
         }
         const queryString = query.toString();
         const data = await apiRequest(`${API_URL}/newsfeed${queryString ? `?${queryString}` : ""}`);
+        if (requestId !== newsfeedLoadRequestId) return;
         newsfeedReports = Array.isArray(data.reports) ? data.reports : [];
         hasLoadedNewsfeed = true;
         const mapStatus = $("newsfeedMapStatus");
@@ -1045,6 +1056,7 @@ async function loadNewsfeed() {
         }
         renderNewsfeed();
     } catch (error) {
+        if (requestId !== newsfeedLoadRequestId) return;
         console.error("Unable to load community reports:", error);
         list.innerHTML = `<div class="newsfeed-empty">${escapeHTML(error.message || getCurrentText("Unable to load community reports.", "কমিউনিটির প্রতিবেদন লোড করা যায়নি।"))}</div>`;
     }
@@ -1055,6 +1067,7 @@ if ($("newsfeedMapSearch")) {
 
 if ($("newsfeedMapLocate")) {
     $("newsfeedMapLocate").addEventListener("click", () => {
+        ++newsfeedLocationIntentId;
         if (!citizenCurrentLocation) {
             $("newsfeedLocateButton")?.click();
             return;
@@ -1069,6 +1082,7 @@ if ($("newsfeedMapLocate")) {
 }
 if ($("newsfeedLocateButton")) {
     $("newsfeedLocateButton").addEventListener("click", () => {
+        const intentId = ++newsfeedLocationIntentId;
         if (!navigator.geolocation) {
             showToast(getCurrentText("Location is not supported by this browser.", "এই ব্রাউজারে অবস্থান সুবিধা নেই।"));
             return;
@@ -1077,6 +1091,11 @@ if ($("newsfeedLocateButton")) {
         button.disabled = true;
         button.textContent = getCurrentText("Finding your area…", "আপনার এলাকা খোঁজা হচ্ছে…");
         navigator.geolocation.getCurrentPosition(position => {
+            if (intentId !== newsfeedLocationIntentId) {
+                button.disabled = false;
+                button.textContent = getCurrentText("Use my location", "আমার অবস্থান ব্যবহার করুন");
+                return;
+            }
             citizenCurrentLocation = { latitude: position.coords.latitude, longitude: position.coords.longitude };
             newsfeedAreaLocation = null;
             const mapSearchStatus = $("newsfeedMapSearchStatus");
@@ -1088,6 +1107,10 @@ if ($("newsfeedLocateButton")) {
             loadNewsfeed();
         }, error => {
             button.disabled = false;
+            if (intentId !== newsfeedLocationIntentId) {
+                button.textContent = getCurrentText("Use my location", "আমার অবস্থান ব্যবহার করুন");
+                return;
+            }
             button.textContent = getCurrentText("Use my location", "আমার অবস্থান ব্যবহার করুন");
             showToast(error.code === 1
                 ? getCurrentText("Location permission was denied.", "অবস্থানের অনুমতি দেওয়া হয়নি।")
