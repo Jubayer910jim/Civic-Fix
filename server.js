@@ -22,6 +22,7 @@ const multer = require("multer");
 require("dotenv").config();
 
 const db = require("./config/db");
+const MySQLSessionStore = require("./config/sessionStore");
 const { configured: cloudImageStorageConfigured, uploadLocalImage, destroyImage, publicIdFromUrl } = require("./config/cloudinary");
 
 
@@ -31,6 +32,15 @@ const { configured: cloudImageStorageConfigured, uploadLocalImage, destroyImage,
 // ==========================================
 
 const app = express();
+
+// Render terminates HTTPS before forwarding requests to the Node service.
+app.set("trust proxy", 1);
+
+const sessionStore = new MySQLSessionStore();
+
+sessionStore.onReady()
+    .then(() => console.log("MySQL session store is ready."))
+    .catch(error => console.error("MySQL session store initialization failed:", error.message));
 
 // Shared in-process cache and request pacing for the public geocoder.
 const geocodeResultCache = new Map();
@@ -57,13 +67,19 @@ app.use(
 
 app.use(
     session({
+        name: "civicfix.sid",
         secret: process.env.SESSION_SECRET,
+
+        store: sessionStore,
 
         resave: false,
 
         saveUninitialized: false,
 
         cookie: {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
             maxAge:
                 1000 *
                 60 *
