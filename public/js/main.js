@@ -161,6 +161,39 @@ if (themeButton) {
 // Load saved theme
 applyTheme();
 
+// ==============================
+// 2A. RESPONSIVE MOBILE NAVIGATION
+// ==============================
+
+const menuToggle = document.getElementById("menuToggle");
+const navLinks = document.getElementById("navLinks");
+
+function closeMobileNavigation() {
+    if (!menuToggle || !navLinks) return;
+    menuToggle.setAttribute("aria-expanded", "false");
+    navLinks.classList.remove("open");
+}
+
+if (menuToggle && navLinks) {
+    menuToggle.addEventListener("click", () => {
+        const isExpanded = menuToggle.getAttribute("aria-expanded") === "true";
+        menuToggle.setAttribute("aria-expanded", String(!isExpanded));
+        navLinks.classList.toggle("open", !isExpanded);
+    });
+
+    navLinks.querySelectorAll("a").forEach(link => {
+        link.addEventListener("click", closeMobileNavigation);
+    });
+
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") closeMobileNavigation();
+    });
+
+    window.addEventListener("resize", () => {
+        if (window.innerWidth > 760) closeMobileNavigation();
+    });
+}
+
 
 // ==============================
 // 3. SCROLL REVEAL ANIMATIONS

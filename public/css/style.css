@@ -117,6 +117,10 @@ button {
     color: var(--primary);
 }
 
+.mobile-nav-auth {
+    display: none;
+}
+
 .nav-actions {
     display: flex;
     align-items: center;
@@ -161,18 +165,47 @@ button {
 
 .menu-toggle {
     display: none;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
     border: 0;
+    border-radius: 10px;
     background: transparent;
+    color: var(--navy);
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.menu-toggle:hover,
+.menu-toggle:focus-visible {
+    background: var(--light);
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .menu-toggle span {
     display: block;
-    width: 25px;
+    width: 24px;
     height: 2px;
-    background: var(--navy);
-    margin: 5px;
-    transition: .25s;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform .2s ease, opacity .2s ease;
+}
+
+.menu-toggle[aria-expanded="true"] span:first-child {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.menu-toggle[aria-expanded="true"] span:nth-child(2) {
+    opacity: 0;
+}
+
+.menu-toggle[aria-expanded="true"] span:last-child {
+    transform: translateY(-7px) rotate(-45deg);
 }
 
 
@@ -1052,19 +1085,28 @@ body.dark-mode {
 
     .navbar {
         min-height: 68px;
+        gap: 6px;
     }
 
     .menu-toggle {
-        display: block;
+        display: inline-flex;
         order: 3;
     }
 
     .nav-actions {
         margin-left: auto;
+        gap: 4px;
     }
 
-    .nav-login {
+    .nav-actions .nav-login {
         display: none;
+    }
+
+    .nav-actions .register-btn {
+        display: inline-flex;
+        padding: 8px 10px;
+        font-size: 11px;
+        white-space: nowrap;
     }
 
     .nav-links {
@@ -1089,6 +1131,18 @@ body.dark-mode {
     .nav-links a {
         display: block;
         padding: 14px 0;
+    }
+
+    .nav-links .mobile-nav-auth {
+        display: list-item;
+        border-top: 1px solid var(--border);
+    }
+
+    .nav-links .mobile-nav-auth a {
+        display: block;
+        padding: 14px 0;
+        color: var(--primary);
+        font-weight: 800;
     }
 
     .hero {
@@ -1145,21 +1199,38 @@ body.dark-mode {
     }
 
     .logo {
-        font-size: 19px;
+        gap: 5px;
+        font-size: 16px;
     }
 
     .logo-icon {
-        width: 34px;
-        height: 34px;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
     }
 
     .nav-actions {
-        gap: 6px;
+        gap: 3px;
     }
 
     .icon-btn {
-        padding: 8px;
+        padding: 5px;
+        font-size: 9px;
+    }
+
+    .theme-btn {
+        font-size: 15px;
+    }
+
+    .nav-actions .register-btn {
+        padding: 6px 8px;
         font-size: 10px;
+    }
+
+    .menu-toggle {
+        width: 36px;
+        height: 36px;
+        flex-basis: 36px;
     }
 
     .hero-content h1 {
