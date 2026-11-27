@@ -28,7 +28,6 @@ let newsfeedLocationIntentId = 0;
 let newsfeedLoadRequestId = 0;
 let communityRadiusCircle = null;
 let isCitizenAuthenticated = false;
-let serverRequestsLocationPermission = false;
 
 let citizenProfile = {
     full_name: "Citizen",
@@ -338,7 +337,6 @@ async function loadCitizenProfile() {
         const data = await apiRequest(`${API_URL}/profile`);
         const profile = data.profile || data.user || data.citizen || data;
         isCitizenAuthenticated = true;
-        serverRequestsLocationPermission = data.requestLocationPermission === true;
 
         citizenProfile = {
             ...citizenProfile,
@@ -1621,33 +1619,6 @@ if ($("languageToggle")) {
     });
 }
 
-function showFirstVisitLocationPrompt() {
-    const prompt = $("locationPermissionPrompt");
-    if (!prompt || localStorage.getItem("civicFixLocationPromptDecision")) return;
-
-    prompt.classList.add("show");
-    prompt.hidden = false;
-    prompt.style.display = "grid";
-    prompt.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
-
-    const closePrompt = decision => {
-        localStorage.setItem("civicFixLocationPromptDecision", decision);
-        prompt.classList.remove("show");
-        prompt.hidden = true;
-        prompt.style.display = "none";
-        prompt.setAttribute("aria-hidden", "true");
-        document.body.style.overflow = "";
-    };
-
-    $("locationPromptLater").addEventListener("click", () => closePrompt("later"), { once: true });
-    $("locationPromptAllow").addEventListener("click", () => {
-        closePrompt("allow");
-        if ($("locationButton")) $("locationButton").click();
-    }, { once: true });
-}
-
-
 /* =========================================================
    14. DARK / LIGHT THEME
 ========================================================= */
@@ -2603,7 +2574,7 @@ document.addEventListener("click", event => {
 
 async function initializeCitizenPortal() {
     // Modal backdrops are hidden until their corresponding action requests them.
-    ["profileModal", "locationPermissionPrompt", "successModal"].forEach(id => {
+    ["profileModal", "successModal"].forEach(id => {
         const modal = $(id);
         if (modal && !modal.classList.contains("show")) {
             modal.hidden = true;
@@ -2632,13 +2603,7 @@ async function initializeCitizenPortal() {
     }
 
     await refreshCitizenDashboard();
-    if (window.location.protocol === "file:") {
-        // A directly opened HTML file bypasses Express, so it cannot receive
-        // the server's profile signal. Keep the page-level location prompt usable.
-        showFirstVisitLocationPrompt();
-    } else if (isCitizenAuthenticated && serverRequestsLocationPermission) {
-        showFirstVisitLocationPrompt();
-    }
+
 }
 
 initializeCitizenPortal();
