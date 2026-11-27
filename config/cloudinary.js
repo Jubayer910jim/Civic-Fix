@@ -54,11 +54,12 @@ function publicIdFromUrl(value) {
 
     try {
         const parsed = new URL(value);
-        if (parsed.protocol !== "https:" || parsed.hostname !== `${cloudName}.res.cloudinary.com`) return null;
+        if (parsed.protocol !== "https:" || parsed.hostname !== "res.cloudinary.com") return null;
 
         const segments = parsed.pathname.split("/").filter(Boolean);
+        if (segments[0] !== cloudName) return null;
         const uploadIndex = segments.indexOf("upload");
-        if (uploadIndex < 0) return null;
+        if (uploadIndex !== 2 || segments[1] !== "image") return null;
 
         const afterUpload = segments.slice(uploadIndex + 1);
         const versionIndex = afterUpload.findIndex(segment =>

@@ -1224,7 +1224,17 @@ function getSafeReportImageUrl(image) {
         try {
             const parsed = new URL(rawPath, window.location.origin);
             if (parsed.origin === window.location.origin) return parsed.pathname + parsed.search;
-            if (parsed.protocol === "https:" && parsed.hostname.endsWith(".res.cloudinary.com")) return parsed.href;
+            // Cloudinary's standard delivery URL is
+            // res.cloudinary.com/<cloud-name>/image/upload/...
+            const cloudinaryPath = parsed.pathname.split("/").filter(Boolean);
+            if (
+                parsed.protocol === "https:" &&
+                parsed.hostname === "res.cloudinary.com" &&
+                cloudinaryPath.length >= 4 &&
+                /^[A-Za-z0-9_-]+$/.test(cloudinaryPath[0]) &&
+                cloudinaryPath[1] === "image" &&
+                cloudinaryPath[2] === "upload"
+            ) return parsed.href;
             return "";
         } catch (error) {
             return "";
